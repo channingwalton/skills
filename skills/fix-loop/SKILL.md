@@ -1,11 +1,13 @@
 ---
 name: fix-loop
-description: Iterative Codex-native review-fix cycle that eliminates critical issues. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or any request that combines finding problems with resolving them automatically.
+description: Iterative Codex-native review-fix cycle that orchestrates code-reviewer and fixer to eliminate critical issues. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or any request that combines finding problems with resolving them automatically.
 ---
 
 # Fix Loop
 
 Autonomous review-fix cycle that iterates until all critical issues are resolved.
+
+This skill orchestrates `code-reviewer` for the read-only review phase and `fixer` for targeted repairs. If either skill is unavailable, follow the review and fix rules embedded here.
 
 The value of this skill is that it separates *finding* problems from *fixing* them. First review in a read-only, disconfirming posture. Then apply minimal targeted fixes. Do not rationalise away findings because you are about to edit the code.
 
@@ -51,6 +53,7 @@ Three iterations is the cap because experience shows that if critical findings p
    - Only critical findings are actioned because warnings and suggestions are judgement calls best left to the author. Automating fixes for subjective issues risks introducing changes the user disagrees with.
 
 3. **FIX (iteration N)** — Announce: `Fix iteration N/3 — addressing N critical issue(s)`
+   - Use the `fixer` skill for targeted repairs when available.
    - Fix only the critical findings.
    - Preserve user changes and avoid unrelated refactors.
    - Record fixed, unfixable, files modified, and test status.
