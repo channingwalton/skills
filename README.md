@@ -4,7 +4,7 @@
 
 Small, opinionated skills for AI coding agents.
 
-These are the skills I use to keep agent work grounded: clear process, tight feedback loops, explicit decisions, and less conversational sludge.
+These skills keep agent work grounded: clear process, tight feedback loops, explicit decisions, and less conversational sludge.
 
 ## Quickstart
 

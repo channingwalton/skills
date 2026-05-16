@@ -9,7 +9,7 @@ description: Use at the end of a session when the user asks how it went, what co
 
 Run **after** a session. Reflect honestly on what worked and what didn't, then feed process-level learnings back into the skills used so next session is better.
 
-**Core principle:** A retrospective is worthless without a concrete change. Every useful finding produces either a skill-file edit or a memory entry. Anything else is venting.
+**Core principle:** A retrospective is worthless without a concrete change. Every useful finding produces either a skill-file edit or an explicit follow-up note/update. Anything else is venting.
 
 ## When to Use
 
@@ -38,12 +38,12 @@ Triggers:
 |---------|---------|
 | Rule that applies to any project | Skill file edit |
 | Discipline slipped (knew rule, skipped it) | Skill edit **and** a one-line entry in the target skill's Red Flags list (create one if absent) naming the rationalisation that led to the slip |
-| Codebase-specific tripwire | project memory |
-| How user likes to work | `feedback` memory |
-| Project/team fact | `project` memory |
-| Domain term | Glossary skill |
+| Codebase-specific tripwire | Proposed project note, issue comment, or documentation update |
+| How user likes to work | Proposed user-preference note, if the agent has a durable memory system |
+| Project/team fact | Proposed project documentation or issue update |
+| Domain term | Proposed glossary or documentation entry |
 
-Rule of thumb: *would a developer on another project benefit?* Yes → skill. No → memory.
+Rule of thumb: *would a developer on another project benefit?* Yes → skill. No → propose the smallest durable place to record it. If no such place exists, keep it in the retrospective output as a follow-up note.
 
 ### Propose format
 
@@ -72,8 +72,8 @@ One rule per paragraph, one example max. Skills bloat when every retro adds thre
    Change: <old → new>
    Why: <one sentence>
 
-## Proposed memory entries
-- <type>: <entry>
+## Proposed follow-up notes
+- <destination or type>: <entry>
 
 Apply these?
 ```
@@ -86,7 +86,7 @@ Apply these?
 - **No anchor.** Proposing an edit without a file path + section heading.
 - **Pure analysis.** Paragraphs of reflection with no concrete change attached.
 - **Premature application.** Applying edits before the user says yes.
-- **Layer mixing.** A project fact bundled into a skill-rule finding. Project facts → memory; skill rules → skill files.
+- **Layer mixing.** A project fact bundled into a skill-rule finding. Project facts → follow-up notes/project docs; skill rules → skill files.
 - **Sprawl.** A finding that needs 30 lines is a rewrite, not a retro.
 
 If any fire, stop. Restart with the sections above.

@@ -103,7 +103,7 @@ Only after step 4 passes is the task complete. Proceed to COMMIT.
 1. Run the project's canonical commit verification command (compile + lint + test) — must be green. Find it from README/CONTRIBUTING, build scripts, package manager scripts, Makefile, or workspace instructions. No red commits; no pushes without a green check on every commit.
    Before running broad commit checks, inspect `git status --short --branch` and the branch diff. If the check will include substantial pre-existing branch changes outside the current task, say so and prefer targeted verification unless the user explicitly asks for the full check. If the user interrupts a broad check and asks to commit/push anyway, proceed only after targeted verification and record the interrupted check in the PR/final summary.
 2. Summarise what will be committed and ask the user to confirm.
-3. Commit directly. Include `Co-authored-by: OpenAI Codex <noreply@openai.com>` in the commit trailer unless the user says otherwise.
+3. Commit directly. If the user, repository, or agent platform specifies a co-author trailer, include that exact trailer. Otherwise use the current agent's appropriate public attribution if known; do not hard-code another agent's identity.
 
 ---
 
