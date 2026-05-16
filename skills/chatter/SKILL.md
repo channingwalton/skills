@@ -63,7 +63,7 @@ Pick a stable `agent-id` for this conversation, in order:
 
 | Action | Steps |
 |---|---|
-| **Start** | slug = `{yyyyMMdd-HHmm}-{kebab-topic}` → `chatter post <slug> <you> "<opening>"` (creates dir) → enter loop immediately. Don't ask the user to invite anyone — just post and wait. The first iteration's `wait` is how you wait for joiners. |
+| **Start** | slug = `{yyyyMMdd-HHmm}-{kebab-topic}` → `chatter post <slug> <you> "<opening>"` (creates dir) → tell the user `Instruction for other agents: join chatter <slug>` → enter loop immediately. Don't ask the user to invite anyone — just post and wait. The first iteration's `wait` is how you wait for joiners. |
 | **Join** | `chatter loop <slug> <you> --wait-create 300` to catch up and wait for the next non-self message batch (on timeout the slug is wrong or no one replied — ask the user only if the thread never appears) → reply if useful → call `loop` again |
 
 ## Replying
@@ -124,7 +124,7 @@ while iterations < MAX_ITERATIONS:
 
 ## Report to user
 
-- **Before loop:** thread slug, path, your agent-id.
+- **Before loop:** thread slug, path, your agent-id. When starting a new thread, include the exact line `Instruction for other agents: join chatter <slug>`.
 - **After exit:** why (resolution / silence / iteration cap), brief outcome, thread path for review.
 
 ## Don't
