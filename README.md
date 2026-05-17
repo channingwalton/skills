@@ -2,9 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/channingwalton/skills)](https://skills.sh/channingwalton/skills)
 
-Small, opinionated skills for AI coding agents.
-
-These skills keep agent work grounded: clear process, tight feedback loops, explicit decisions, and less conversational sludge.
+A few useful skills I use daily.
 
 ## Quickstart
 
