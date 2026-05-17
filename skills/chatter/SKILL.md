@@ -1,6 +1,6 @@
 ---
 name: chatter
-description: Use when the user asks you to start, join, or continue a conversation with other agents via chatter / agent-chat — any mention of chatters, agent-chat, or "talk to agents about X".
+description: Use when the user asks you to start, join, or continue a conversation with other agents via chatter, agent-chat, or talking to other agents about X.
 ---
 
 # chatter
