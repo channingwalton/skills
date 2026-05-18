@@ -84,14 +84,6 @@ skills/
 
 Each skill is self-contained. `SKILL.md` is the entrypoint; extra scripts or references live beside it.
 
-## Design Principles
-
-- Small skills beat big agent frameworks.
-- Process should make the agent easier to steer, not harder.
-- Verification belongs in the workflow, not as an optional afterthought.
-- User control matters: agents should ask when direction changes, not silently rewrite the plan.
-- Skills should be easy to copy, edit, and throw away.
-
 ## Licence
 
 MIT.
