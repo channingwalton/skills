@@ -33,6 +33,8 @@ Requirements are arguments in disguise — stated conclusions resting on unstate
 
 **For changes to code without an existing test seam**, surface the test-infrastructure choice to the user during CLARIFY — adding a test dep (mockk, testcontainers) or introducing an injection seam (client interface, function parameter) is a scope decision the user owns, not one to silently defer. Name the options explicitly.
 
+**When presenting design clarifications**, define any issue-specific term inside the question itself — don't assume the user shares the ticket's framing. For an unfamiliar design space, ask one decision at a time and expect clarifying questions back; a batched multiple-choice form suits settled trade-offs, not exploration.
+
 ### SLICE — Break Into Tasks
 
 Tasks must be **vertical** (end-to-end functionality), **small** (one TDD cycle), **ordered** (dependency first, then value), and **testable** (clear acceptance criteria). Slice by behaviour, not by implementation layer.
