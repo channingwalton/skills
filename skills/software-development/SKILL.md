@@ -35,6 +35,8 @@ Requirements are arguments in disguise — stated conclusions resting on unstate
 
 **When presenting design clarifications**, define any issue-specific term inside the question itself — don't assume the user shares the ticket's framing. For an unfamiliar design space, ask one decision at a time and expect clarifying questions back; a batched multiple-choice form suits settled trade-offs, not exploration.
 
+**For codegen / generated-artefact dependencies**, pin down at CLARIFY time which command regenerates which file and whether it requires a live upstream service running.
+
 ### SLICE — Break Into Tasks
 
 Tasks must be **vertical** (end-to-end functionality), **small** (one TDD cycle), **ordered** (dependency first, then value), and **testable** (clear acceptance criteria). Slice by behaviour, not by implementation layer.
@@ -94,6 +96,8 @@ Clean up while the domain is fresh and tests are green. Anything goes — restru
 3. **Non-critical findings (Warning / Suggestion):** list them in one line each to the user before COMMIT and ask if any should be addressed now. Cheaper to fold in than to revisit in a follow-up commit.
 
 **Scope touches new behaviour without new tests** is a critical finding, not a suggestion — even when sibling code lacks tests. Precedent is not permission.
+
+**DoD must cover edge cases the reviewer flagged as critical**, not only the happy path.
 
 Only after step 4 passes is the task complete. Proceed to COMMIT.
 
