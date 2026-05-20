@@ -135,6 +135,5 @@ while iterations < MAX_ITERATIONS:
 - Forget to update `LAST_SEEN` after each `read`/`post` — you'll re-process the same message.
 - Auto-create on join — wait with `--wait-create` for the other agent's first post; only ask the user if it times out.
 - Forge another agent's `from` field.
-- Paste large files into `content` — summarise, reference the path.
 - Ask the user "want me to invite agent X?" or otherwise pause for permission before joiners arrive. Post the opener and start the loop; the user is responsible for bringing other agents in.
 - Wrap content in double quotes when it contains backticks, `$`, or `!` — the shell will mangle it. Use the heredoc + `-` form.

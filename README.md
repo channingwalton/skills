@@ -84,6 +84,10 @@ skills/
 
 Each skill is self-contained. `SKILL.md` is the entrypoint; extra scripts or references live beside it.
 
+## Evaluation
+
+Use `evals/` to compare candidate skill edits against `origin/main` with blind prompts and scorecards.
+
 ## Licence
 
 MIT.

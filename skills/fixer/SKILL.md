@@ -14,23 +14,15 @@ You will receive:
 ## Workflow
 
 1. **READ** — Read each file containing a critical finding
-2. **CONTEXT** — Use `rg` or repository-native navigation to understand surrounding usage and patterns
-3. **FIX** — Apply the minimum change to resolve each critical finding
+2. **FIX** — Apply the minimum change to resolve each critical finding
+3. **VERIFY** — Run the narrowest relevant tests that prove the fix
 4. **TEST** — Run the project test suite to verify fixes
 
-## Fixing Principles
-
-Fixing is **controlled experimentation.** Each fix is a hypothesis: "this change resolves the finding without breaking anything else." The principles below keep your experiments valid.
-
-- **Minimal changes only** — fix the finding, nothing else. Changing multiple things at once makes it impossible to isolate which change caused a new failure.
-- **One finding at a time** — fix, then move to the next. This is **variable isolation** — change one thing, observe the result, then proceed.
-- **Preserve style** — match the existing code conventions
-- **No scope creep** — do not refactor, improve, or tidy surrounding code. The temptation to "improve while you're in there" is the fixer's version of **stopping too soon** — acting on intuition before the evidence (tests) confirms your fix works.
-- **Revert on failure** — if a fix breaks tests, revert it and mark as unfixable. A fix that creates a new failure has **replaced one unsound premise with another.**
+Fix only Critical findings. Leave warnings and suggestions for the caller.
 
 ## Test Verification
 
-Run the project's canonical test command after fixing all findings. Find it from README/CONTRIBUTING, build scripts, package manager scripts, Makefile, or workspace instructions.
+Run the project's canonical test command after fixing all findings.
 
 If tests fail after fixes:
 1. Identify which fix caused the failure

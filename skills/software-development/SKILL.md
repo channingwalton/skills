@@ -71,11 +71,9 @@ Each task runs a four-step cycle; all four must complete before the task is done
 
 ### Step 1: 🔴 Red — Failing Test
 
-Write a failing test for the next behaviour. If the change threads through multiple call sites (a shared helper, query, or validator that several callers use), write a failing test per call site before going green — a helper-level test alone can leave caller wiring silently wrong. Use the appropriate language skill. See [development reference](references/development.md).
+Write a failing test for the next behaviour. If the change threads through multiple call sites, write a failing test per call site before going green — a helper-level test alone can leave caller wiring silently wrong. Use the appropriate language skill. See [development reference](references/development.md).
 
 ### Step 2: 🟢 Green — Make It Pass
-
-Minimum code to pass — but choose domain-appropriate data structures (a `Map` when the domain maps to `Map`, not a `List`).
 
 **Surgical:** touch only what the test requires. Match existing style. No drive-by edits to adjacent code, comments, or formatting. Every changed line should trace to the failing test. Broader cleanup belongs in Refactor.
 
@@ -83,7 +81,7 @@ Minimum code to pass — but choose domain-appropriate data structures (a `Map` 
 
 ### Step 3: 🔵 Refactor
 
-Clean up while the domain is fresh and tests are green. Anything goes — restructure, rename, dedupe, reshape abstractions. See [refactor reference](references/refactor.md). After each refactoring step, **STOP** and ask the user if they want further refactoring.
+Clean up while the domain is fresh and tests are green. Continue refactoring while behaviour stays green; ask only when choosing between materially different cleanup directions or expanding scope. See [refactor reference](references/refactor.md).
 
 **Public signature changes:** same rule as Green — after a signature change, read every caller. Refactor is where this most often bites.
 

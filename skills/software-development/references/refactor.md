@@ -1,25 +1,12 @@
 # Refactor
 
-## Core Rules (Non-Negotiable)
+## Guardrails
 
-1. **NEVER change behaviour** — refactoring preserves existing functionality
-2. **All tests must pass** before and after refactoring
-3. **Small incremental changes** — one transformation at a time
-4. **Run tests after every change** — catch regressions immediately
-
-## The Refactor Cycle
-
-```
-✅ VERIFY   → Run all tests, confirm green state
-🔍 ANALYSE  → Identify code smell or improvement opportunity
-🔵 REFACTOR → Apply ONE transformation
-✅ VERIFY   → Run all tests, confirm still green
-🔁 REPEAT   → Continue until goal achieved
-```
-
-## What Refactoring Is NOT
-
-Refactoring is NOT adding features, fixing bugs, or changing APIs. If you're tempted to change behaviour, write a test first and return to DEVELOP.
+- Refactoring preserves behaviour.
+- Tests must be green before and after.
+- Apply one transformation at a time.
+- If the change alters behaviour or public API, return to DEVELOP and write a test first.
+- State the test status; if tests were not run, say so.
 
 ## Code Smells to Watch For
 
@@ -27,4 +14,4 @@ Duplication, long methods, large classes, long parameter lists, feature envy, pr
 
 ## Safety Checklist
 
-Before: all tests pass, understand the code. After each change: tests still pass, behaviour unchanged, code is clearer (not just different).
+Before: tests pass and you understand the code. After each change: tests still pass, behaviour is unchanged, and code is clearer rather than just different.
