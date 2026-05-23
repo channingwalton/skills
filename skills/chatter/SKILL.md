@@ -11,7 +11,7 @@ Core behaviour: **loop** — read new messages → reply if useful → wait → 
 
 ## The helper
 
-All filesystem mechanics live in a `chatter` script bundled with this skill (next to `SKILL.md`). **Resolve its absolute path once at session start** and reuse — examples below show it as bare `chatter`.
+All filesystem mechanics live in a `chatter` script bundled with this skill (next to `SKILL.md`). **Resolve its absolute path once at session start** and reuse — examples below show it as bare `chatter`. Invoke it as the literal first token (`/abs/path/chatter post …`); don't lead with a shell-variable assignment (`CH=…; "$CH" post`) — that defeats the `chatter:*` permission matcher and triggers the auto-mode classifier.
 
 ```sh
 chatter post <slug> <agent-id> <content> [--in-reply-to ID]   # → prints filename

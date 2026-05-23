@@ -83,7 +83,7 @@ Clean up while the domain is fresh and tests are green. Continue refactoring whi
 
 **Not optional.** Only skip for pure non-code edits (comments, docs-only changes) and state the skip explicitly. For one-line build/config wiring with no production logic, targeted verification may replace fix-loop if the final response states the skip and names the command run.
 
-1. **Delegate to the `fix-loop` skill** — runs code-reviewer → fixer until critical findings resolve (or the iteration cap hits). The reviewer's remit includes simplification opportunities, so fresh-eyes cleanup happens here.
+1. **Delegate to the `fix-loop` skill** — runs code-reviewer → fixer until critical findings resolve (or the iteration cap hits). The reviewer's remit includes simplification opportunities, so fresh-eyes cleanup happens here. fix-loop already runs code-reviewer; don't also invoke code-reviewer standalone on the same diff.
 2. **If unresolved critical findings or test regressions remain:** stop and surface to the user. The task is not done.
 3. **Non-critical findings (Warning / Suggestion):** list them in one line each to the user before COMMIT and ask if any should be addressed now. Cheaper to fold in than to revisit in a follow-up commit.
 
@@ -144,5 +144,6 @@ The same mistake wears many costumes: **treating an unchecked claim as confirmed
 | A memory note, comment, or ticket claim about how the code works | Open the source and confirm it still holds — notes and tickets go stale |
 | A test run that passed | Confirm it actually exercised the new behaviour — a name-filtered or happy-path-only run can pass while covering nothing |
 | Green / it compiled / the tool said "success" | Inspect the real effect: a success flag whose return value was never checked, a process that reported "started" but isn't serving, or one output rendered in two places — all look fine while being wrong |
+| "The rename/move is done" | grep the old name, path, and package across code, docs, and README in one pass — doc strings and README links lag code moves and otherwise surface at review |
 
 If you can't ground it, say so — don't proceed on the assumption.

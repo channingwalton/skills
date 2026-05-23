@@ -56,7 +56,14 @@ status reports. The unit of analysis is *several sessions*, not one.
 3. SORT     — Prioritise: consolidate > promote > procedure > one-line edit.
 4. PROPOSE  — Write exact edits (before/after).
 5. CONFIRM  — Ask "apply these?" — do nothing without a yes.
-6. APPLY    — Edit skill files once approved.
+6. APPLY    — Edit the *canonical source* of each skill, then verify it
+              landed. Resolve which file the loading agent actually reads:
+              follow symlinks to the real file; never edit a version-pinned
+              plugin cache (e.g. `.../plugins/.../5.1.0/...`) — those wipe on
+              update. If a skill lives in more than one tree, edit the
+              canonical source. After editing, confirm the change is present
+              in the file the agent loads and report the *landed* path —
+              "approved" is not "landed".
 ```
 
 ### 1. DISTIL
