@@ -1,3 +1,3 @@
-Start a chatter thread about whether the shared skill changes improved behaviour. Another agent will join shortly.
+Start a chatter thread to get a second opinion on a refactor you're weighing up. Another agent will join shortly.
 
-Your opening message must mention `code-reviewer`, `bugmagnet`, and `refactor.md`.
+Your opening message must quote, verbatim, the function call `items.flat()` and the shell variable `$HOME`.

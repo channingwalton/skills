@@ -6,10 +6,17 @@
 
 - **Who** — which actor triggers this, and do different actors expect different things?
 - **When** — at what point in the process? What state must already exist?
-- **Boundaries** — what counts as valid input? Smallest/largest/emptiest case?
+- **Boundaries** — what counts as valid input? Smallest/largest/emptiest case? For values that span a range (dates, versions, numeric intervals), what decides membership — start, end, full containment, or overlap?
 - **Failure** — what happens when this *can't* work? Who finds out and how?
-- **Definitions** — are we using the same words to mean the same things? (→ `glossary` skill)
+- **Definitions** — are we using the same words to mean the same things? Record any agreed term definitions where the project keeps them.
 - **User-facing strings** — does this change error messages, UI copy, or notifications? Who reads them (operator, end-user, ops triage)? Does the change preserve diagnostic value?
+
+**Context-specific premises** — check the ones that apply:
+
+- **UI change** — pin the exact dialog/page by *role* (which user) and *app/bundle* before picking a component. A component name that matches the feature in two apps is a trap, not an answer; ask for a screenshot or navigation path.
+- **No existing test seam** — adding a test dependency or an injection seam (an interface, a function parameter) is a scope decision the user owns. Name the options; don't silently defer.
+- **Generated artefacts / codegen** — pin which command regenerates which file and whether it needs a live upstream service running. Regenerate by default; hand-edit generated output only when repo docs or user approval make that explicit.
+- **Presenting the questions** — define any issue-specific term inside the question itself; don't assume the user shares the ticket's framing. For an unfamiliar design space, ask one decision at a time and expect questions back; a batched multiple-choice form suits settled trade-offs, not exploration.
 
 ## ✂️ SLICE — Break Into Tasks
 

@@ -26,7 +26,7 @@ Triggers:
 ```
 1. AUDIT    — Scan full session transcript. Two lists: worked / didn't. Cite concrete turn/action per item.
 2. SORT     — Each "didn't" item: skill gap or work lesson?
-3. LOCATE   — For skill gaps: name the file and section.
+3. LOCATE   — For skill gaps: open the file and confirm the heading exists. A path/section you haven't read is not a valid anchor.
 4. PROPOSE  — Write the exact edit (before/after).
 5. CONFIRM  — Ask "apply these?" — do nothing without a yes.
 6. APPLY    — Edit skill files once approved.
@@ -39,9 +39,10 @@ Triggers:
 | Rule that applies to any project | Skill file edit |
 | Discipline slipped (knew rule, skipped it) | Skill edit **and** a one-line entry in the target skill's Red Flags list (create one if absent) naming the rationalisation that led to the slip |
 | Codebase-specific tripwire | Proposed project note, issue comment, or documentation update |
+| Project tripwire that has already recurred from memory | Promote it into the repo's own docs (AGENTS.md / CLAUDE.md / README) — agents read repo docs, not your memory; a memory-only tripwire keeps recurring. Only if it's verified, project-owned, and non-sensitive, and the user has approved the exact text to write |
 | How user likes to work | Proposed user-preference note, if the agent has a durable memory system |
 | Project/team fact | Proposed project documentation or issue update |
-| Domain term | Proposed glossary or documentation entry |
+| Domain term | Proposed definition in the project's documentation |
 | Same finding recurs (user notes "we've hit this before" or memory shows prior entries) | Promote: propose a new skill file — a one-line rule clearly isn't holding it |
 | Multi-step recipe that worked and is reusable | Procedure candidate (see Output Shape) — a rule-line wouldn't carry the sequence |
 
@@ -110,37 +111,12 @@ If any fire, stop. Restart with the sections above.
 
 ## Persistence (opt-in)
 
-This skill does **not** write retro outputs to disk by default. Persisting retros only makes sense when paired with a meta-retro that aggregates them — silent file creation in shared use is a footgun.
+By default this skill prints the retro inline and writes nothing to disk. If you want a durable record — to look back later, or to feed a cross-session review — set the `RETROSPECTIVE_DIR` environment variable.
 
-Persist only if the environment variable `RETROSPECTIVE_DIR` is set (check via shell). If unset, print the retro inline and stop. Do not propose creating directories or files.
+Persist only if `RETROSPECTIVE_DIR` is set (check via shell). If unset, print inline and stop; do not propose creating directories or files.
 
 When `RETROSPECTIVE_DIR` is set:
 
 - Write one file per retro: `$RETROSPECTIVE_DIR/YYYY-MM-DD-HHMMSS.md`, timestamp from shell `date`.
 - File contents = the rendered Output Shape, unchanged.
 - Confirm the resolved path with the user once before the first write of a session; write subsequent retros in that session without re-confirming.
-
-## Meta mode (cross-session)
-
-When the user asks for a retro across many sessions ("monthly retro", "meta retro", "what's been recurring", "review the retros"), run the same process — audit → sort → propose → confirm → apply — but over the persisted retro files rather than a single session transcript.
-
-**Preconditions:**
-
-- `RETROSPECTIVE_DIR` must be set and contain prior retro files. If unset or empty, stop and say so.
-- Establish the window: ask which retros to include if the user didn't specify (e.g. last month, last 10 retros, all).
-
-**What changes in the process:**
-
-1. AUDIT — Read every retro file in the window. Build two lists: themes that recur across multiple retros (worked / didn't), each with the file references that contributed.
-2. SORT — Reorder the sort table by priority:
-   1. **Consolidate** — multiple existing rules saying nearly the same thing. Propose merging.
-   2. **Promote** — same finding surfaced in N sessions but still living as a one-line rule. Propose a new skill file.
-   3. **Procedure candidate** — recurring multi-step recipe still buried in prose. Propose extraction.
-   4. **One-line edits** — only if a recurring finding doesn't fit the above.
-3. PROPOSE / CONFIRM / APPLY — unchanged.
-
-**Bias to design against:** sprawl. A monthly retro that suggests 10 changes will overwhelm. Cap proposals at the top 3-5 by recurrence count; surface the rest as a "noted but not actioned" appendix.
-
-## Meta
-
-This skill is itself subject to retrospection. If a retro using this skill surfaces a gap in *this* skill, edit `SKILL.md` here. Same loop.

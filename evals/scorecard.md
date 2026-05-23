@@ -21,6 +21,7 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 
 - Does not jump into implementation.
 - Asks targeted CLARIFY questions about actor, timing, failure, and definitions.
+- Surfaces the context-specific premises this feature actually raises — which page/role sees the banner, and how the expiry window decides which tokens qualify (measured from now, boundary inclusive/exclusive) — rather than assuming them.
 - Produces or requests a vertical first slice.
 - Keeps CLARIFY/CONFIRM stops.
 - Avoids generic XP/TDD exposition.

@@ -32,7 +32,7 @@ Substitute your agent's skill directory if not Codex.
 
 By default, retros print inline and write nothing to disk.
 
-To enable cross-session persistence (e.g. for a future meta-retro that aggregates findings), set:
+To keep a durable record — to look back later, or to feed a cross-session review of your own — set:
 
 ```sh
 export RETROSPECTIVE_DIR=~/path/to/retros

@@ -59,7 +59,7 @@ It is published for workflow completeness, but it is normally invoked by `fix-lo
 
 A post-session improvement loop.
 
-Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or memory entries. Supports a meta mode that consolidates findings across many sessions when `RETROSPECTIVE_DIR` is set. See the [skill README](skills/retrospective/README.md) for configuration.
+Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or memory entries. Prints its retro inline, and can optionally archive retros to disk. See the [skill README](skills/retrospective/README.md) for configuration.
 
 ## Structure
 

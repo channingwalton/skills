@@ -21,7 +21,7 @@ The DEVELOP cycle is a task's Definition of Done: **no task is complete until th
 
 ## Phase 1: Planning (📋 PLAN) — Interactive
 
-Understand and decompose the feature before writing any code. Use `glossary` skill for unfamiliar domain terms.
+Understand and decompose the feature before writing any code. Pin down any unfamiliar domain terms before coding.
 
 Follow this sequence: **DISCUSS → CLARIFY → SLICE → FALSIFY → CONFIRM**. See [planning reference](references/planning.md) for detailed steps and examples.
 
@@ -29,13 +29,7 @@ Follow this sequence: **DISCUSS → CLARIFY → SLICE → FALSIFY → CONFIRM**.
 
 Requirements are arguments in disguise — stated conclusions resting on unstated premises. Restate the requirement as "Given [premises], then [conclusion]" and ask what premises are missing. Challenge assumptions — especially those that feel obvious. **STOP** until questions are answered.
 
-**For UI changes**, pin down the exact dialog/page by *role* (which user type) and *app* (which bundle) before picking a component. When a component's name matches the feature in two different apps, that's a trap, not an answer. Ask for a screenshot or a navigation path.
-
-**For changes to code without an existing test seam**, surface the test-infrastructure choice to the user during CLARIFY — adding a test dep (mockk, testcontainers) or introducing an injection seam (client interface, function parameter) is a scope decision the user owns, not one to silently defer. Name the options explicitly.
-
-**When presenting design clarifications**, define any issue-specific term inside the question itself — don't assume the user shares the ticket's framing. For an unfamiliar design space, ask one decision at a time and expect clarifying questions back; a batched multiple-choice form suits settled trade-offs, not exploration.
-
-**For codegen / generated-artefact dependencies**, pin down at CLARIFY time which command regenerates which file and whether it requires a live upstream service running.
+Run the premise checklist in [planning reference](references/planning.md) `CLARIFY`, including the context-specific cases (UI, test seam, date-range membership, codegen, how to present the questions) before CONFIRM.
 
 ### SLICE — Break Into Tasks
 
@@ -138,3 +132,17 @@ Announce clearly when switching:
 🔁 ITERATE → Reviewing remaining tasks and moving to next task
 ✅ COMPLETE → Feature done
 ```
+
+---
+
+## Red Flags — unverified ground
+
+The same mistake wears many costumes: **treating an unchecked claim as confirmed**, then building on it. When you catch yourself about to rely on any of these, do the grounding action *first*:
+
+| You're about to trust… | Grounding action before continuing |
+|---|---|
+| A memory note, comment, or ticket claim about how the code works | Open the source and confirm it still holds — notes and tickets go stale |
+| A test run that passed | Confirm it actually exercised the new behaviour — a name-filtered or happy-path-only run can pass while covering nothing |
+| Green / it compiled / the tool said "success" | Inspect the real effect: a success flag whose return value was never checked, a process that reported "started" but isn't serving, or one output rendered in two places — all look fine while being wrong |
+
+If you can't ground it, say so — don't proceed on the assumption.
