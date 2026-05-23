@@ -120,6 +120,27 @@ When `RETROSPECTIVE_DIR` is set:
 - File contents = the rendered Output Shape, unchanged.
 - Confirm the resolved path with the user once before the first write of a session; write subsequent retros in that session without re-confirming.
 
+## Meta mode (cross-session)
+
+When the user asks for a retro across many sessions ("monthly retro", "meta retro", "what's been recurring", "review the retros"), run the same process — audit → sort → propose → confirm → apply — but over the persisted retro files rather than a single session transcript.
+
+**Preconditions:**
+
+- `RETROSPECTIVE_DIR` must be set and contain prior retro files. If unset or empty, stop and say so.
+- Establish the window: ask which retros to include if the user didn't specify (e.g. last month, last 10 retros, all).
+
+**What changes in the process:**
+
+1. AUDIT — Read every retro file in the window. Build two lists: themes that recur across multiple retros (worked / didn't), each with the file references that contributed.
+2. SORT — Reorder the sort table by priority:
+   1. **Consolidate** — multiple existing rules saying nearly the same thing. Propose merging.
+   2. **Promote** — same finding surfaced in N sessions but still living as a one-line rule. Propose a new skill file.
+   3. **Procedure candidate** — recurring multi-step recipe still buried in prose. Propose extraction.
+   4. **One-line edits** — only if a recurring finding doesn't fit the above.
+3. PROPOSE / CONFIRM / APPLY — unchanged.
+
+**Bias to design against:** sprawl. A monthly retro that suggests 10 changes will overwhelm. Cap proposals at the top 3-5 by recurrence count; surface the rest as a "noted but not actioned" appendix.
+
 ## Meta
 
 This skill is itself subject to retrospection. If a retro using this skill surfaces a gap in *this* skill, edit `SKILL.md` here. Same loop.

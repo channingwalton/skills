@@ -59,7 +59,7 @@ It is published for workflow completeness, but it is normally invoked by `fix-lo
 
 A post-session improvement loop.
 
-Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or memory entries.
+Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or memory entries. Supports a meta mode that consolidates findings across many sessions when `RETROSPECTIVE_DIR` is set. See the [skill README](skills/retrospective/README.md) for configuration.
 
 ## Structure
 
@@ -80,6 +80,7 @@ skills/
     references/
   retrospective/
     SKILL.md
+    README.md
 ```
 
 Each skill is self-contained. `SKILL.md` is the entrypoint; extra scripts or references live beside it.
