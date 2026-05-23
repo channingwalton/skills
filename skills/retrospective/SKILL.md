@@ -1,52 +1,119 @@
 ---
 name: retrospective
-description: Use at the end of a session when the user asks how it went, what could be improved, how well the skill worked, or says "retrospective" / "retro" / "what did we learn". Surfaces gaps in the skill under examination and proposes targeted edits to fix them.
+description: Use on a fortnightly or post-milestone cadence, or when the user says "retrospective" / "retro" / "what's been recurring" / "what did we learn" / "review the last few sessions". Reads multiple session transcripts, distils each, and proposes targeted skill edits for patterns that recur across them. Not for single-session end-of-task review.
 ---
 
 # Retrospective
 
 ## Overview
 
-Run **after** a session. Reflect honestly on what worked and what didn't, then feed process-level learnings back into the skills used so next session is better.
+Run across **multiple sessions** — a fortnight of work, or since the last
+retro. Distil each session transcript into a structured note, audit across
+those notes for patterns, then feed recurring process-level learnings back
+into the skills used.
 
-**Core principle:** A retrospective is worthless without a concrete change. Every useful finding produces either a skill-file edit or an explicit follow-up note/update. Anything else is venting.
+**Core principle:** A retrospective is worthless without a concrete change.
+Every useful finding produces either a skill-file edit or an explicit
+follow-up note. Anything else is venting.
+
+**Cadence principle:** A single session is too small a sample. A pattern is
+worth acting on when it recurs across sessions — that is what this skill
+looks for. Single-session findings are noted but only escalated if
+high-severity.
 
 ## When to Use
 
 Triggers:
 
-- "How well did [the skill / that / it] work?" / "How did that go?"
-- "What could we improve?" / "retro" / "what did we learn"
-- End of a feature/task, after commit, before moving on
+- Fortnightly / end of a milestone / "let's do a retro"
+- "What's been recurring?" / "what did we learn?" / "review the last few sessions"
+- "How well have the skills been working lately?"
 
-**Not for** mid-task check-ins or routine status reports.
+**Not for** single-session end-of-task review, mid-task check-ins, or routine
+status reports. The unit of analysis is *several sessions*, not one.
+
+## Preconditions
+
+1. **Transcripts must be readable.** Session transcripts live in different
+   places depending on the agent (Claude Code, Codex, Gemini, etc.) and the
+   host. There is no fixed path. If the location isn't already known or
+   obvious from context, **ask the user where this window's transcripts are
+   before starting.** If transcripts aren't saved anywhere readable, stop and
+   say so — that's the one piece of infrastructure this skill needs.
+
+2. **The window must be defined.** The user specifies it (last fortnight,
+   last N sessions, since the last retro, a list of files). If unspecified,
+   ask before starting.
 
 ## The Process
 
 ```
-1. AUDIT    — Scan full session transcript. Two lists: worked / didn't. Cite concrete turn/action per item.
-2. SORT     — Each "didn't" item: skill gap or work lesson?
-3. LOCATE   — For skill gaps: open the file and confirm the heading exists. A path/section you haven't read is not a valid anchor.
-4. PROPOSE  — Write the exact edit (before/after).
+1. DISTIL   — For each transcript in the window, in isolation: read it, write
+              a structured intermediate note to a tmp dir. One transcript at a
+              time; do not load them all into context together.
+2. AUDIT    — Read the intermediate notes. Two lists: recurring worked /
+              recurring didn't, with note references per item.
+3. SORT     — Prioritise: consolidate > promote > procedure > one-line edit.
+4. PROPOSE  — Write exact edits (before/after).
 5. CONFIRM  — Ask "apply these?" — do nothing without a yes.
 6. APPLY    — Edit skill files once approved.
 ```
 
-### Sort: skill gap vs. work lesson
+### 1. DISTIL
+
+Create a tmp working dir once at the start (e.g. `mktemp -d`). Then, treating
+**each transcript as its own task** — read one, write its note, move on; never
+hold all transcripts in context at once — produce a note containing:
+
+- What the session was nominally about
+- What actually happened (short narrative, including rework)
+- Wrong paths pursued, and why
+- Corner cases / failures discovered late — and at what point they surfaced
+- Test-quality observations: tests that passed but didn't cover the risk;
+  tests that caught something the implementation missed
+- Skill rules invoked, skipped, or that would have helped if they existed
+- Any explicit **"remember X for retro"** markers the user dropped during the
+  session — these are deliberate signals; capture them verbatim
+- Candidate findings — flagged generously. False positives are cheap here;
+  the AUDIT step filters them.
+
+Save each as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md` (timestamp from shell
+`date`).
+
+### 2. AUDIT
+
+Read the notes back. Build two lists — **recurring worked** and **recurring
+didn't** — each item citing the notes it came from. A finding that appears in
+one note only is noted but not escalated unless it's high-severity.
+
+### 3. SORT
+
+Prioritise proposals in this order:
+
+1. **Consolidate** — multiple existing rules saying nearly the same thing.
+   Propose merging them.
+2. **Promote** — the same finding recurring across N sessions but still living
+   as a one-line rule. Propose a new skill file; a line clearly isn't holding it.
+3. **Procedure candidate** — a recurring multi-step recipe still buried in
+   prose. Propose extracting it (a rule-line can't carry a sequence).
+4. **One-line edit** — only if a recurring finding fits none of the above.
+
+Within that, use the gap-vs-lesson table to decide *where* each finding lands:
 
 | Finding | Goes to |
 |---------|---------|
 | Rule that applies to any project | Skill file edit |
 | Discipline slipped (knew rule, skipped it) | Skill edit **and** a one-line entry in the target skill's Red Flags list (create one if absent) naming the rationalisation that led to the slip |
 | Codebase-specific tripwire | Proposed project note, issue comment, or documentation update |
-| Project tripwire that has already recurred from memory | Promote it into the repo's own docs (AGENTS.md / CLAUDE.md / README) — agents read repo docs, not your memory; a memory-only tripwire keeps recurring. Only if it's verified, project-owned, and non-sensitive, and the user has approved the exact text to write |
-| How user likes to work | Proposed user-preference note, if the agent has a durable memory system |
+| Project tripwire that has already recurred | Promote into the repo's own docs (AGENTS.md / CLAUDE.md / README) — agents read repo docs, not your memory. Only if verified, project-owned, non-sensitive, and the user has approved the exact text |
+| How the user likes to work | Proposed user-preference note, if the agent has a durable memory system |
 | Project/team fact | Proposed project documentation or issue update |
 | Domain term | Proposed definition in the project's documentation |
-| Same finding recurs (user notes "we've hit this before" or memory shows prior entries) | Promote: propose a new skill file — a one-line rule clearly isn't holding it |
-| Multi-step recipe that worked and is reusable | Procedure candidate (see Output Shape) — a rule-line wouldn't carry the sequence |
+| Multi-step recipe that worked and is reusable | Procedure candidate |
 
-Rule of thumb: *would a developer on another project benefit?* Yes → skill. No → propose the smallest durable place to record it. If no such place exists, keep it in the retrospective output as a follow-up note.
+Rule of thumb: *would a developer on another project benefit?* Yes → skill.
+No → the smallest durable place to record it. If no such place exists, keep it
+as a follow-up note in the output.
 
 ### Propose format
 
@@ -58,18 +125,24 @@ After: <proposed line(s)>
 Why: <one-sentence rationale>
 ```
 
-One rule per paragraph, one example max. Skills bloat when every retro adds three paragraphs.
+One rule per paragraph, one example max. Skills bloat when every retro adds
+three paragraphs.
+
+**Cap proposals at the top 3–5 by recurrence.** The rest go in a "Noted but
+not actioned" appendix.
 
 ## Output Shape
 
+Printed inline. Nothing is written to disk except the tmp intermediate notes.
+
 ```
-## Worked
-- <concrete item with why>
+## Recurring — worked
+- <item with note references>
 
-## Didn't work
-- <concrete item with why>
+## Recurring — didn't work
+- <item with note references>
 
-## Proposed skill edits
+## Proposed skill edits   (top 3–5 by recurrence)
 1. File: <path>
    Section: <heading>
    Change: <old → new>
@@ -83,40 +156,39 @@ One rule per paragraph, one example max. Skills bloat when every retro adds thre
    Trigger: <when to invoke>
    Steps:
      1. <step>
-     2. <step>
    Destination: <new skill file path> or <existing skill + section>
    Why a procedure, not a rule: <one sentence>
 
 ## Proposed skill promotions
 1. Pattern: <one-line description>
-   Recurrence evidence: <prior sessions / memory entries / user statement>
+   Recurrence evidence: <which notes / sessions>
    Destination: <new skill file path + proposed name>
-   Why promote: <one sentence — why a line-edit isn't enough>
+   Why promote: <one sentence>
+
+## Noted but not actioned
+- <single-session or lower-priority findings>
 
 Apply these?
 ```
 
 ## Red Flags — stop and restart
 
-- **Sycophancy.** Praising what the user just praised. "CLARIFY worked well" is empty — what premise did it *miss*?
-- **Empty phrases.** "Overall it went well" / "a few small things". Be concrete or drop it.
-- **Generic advice.** "Test more" / "plan better" — not an edit. Name a file and section or drop it.
+- **Sycophancy.** Praising what the user just praised. "CLARIFY worked well"
+  is empty — what premise did it *miss*?
+- **Empty phrases.** "Overall it went well" / "a few small things". Concrete or drop it.
+- **Generic advice.** "Test more" / "plan better" — not an edit. Name a file
+  and section or drop it.
 - **No anchor.** Proposing an edit without a file path + section heading.
 - **Pure analysis.** Paragraphs of reflection with no concrete change attached.
 - **Premature application.** Applying edits before the user says yes.
-- **Layer mixing.** A project fact bundled into a skill-rule finding. Project facts → follow-up notes/project docs; skill rules → skill files.
-- **Sprawl.** A finding that needs 30 lines is a rewrite, not a retro — *unless* it's a genuine multi-step procedure, in which case route it to Proposed procedure candidates rather than collapsing it to a one-liner.
+- **Layer mixing.** A project fact bundled into a skill-rule finding. Project
+  facts → follow-up notes/project docs; skill rules → skill files.
+- **Sprawl.** A finding that needs 30 lines is a rewrite, not a retro —
+  *unless* it's a genuine multi-step procedure, in which case route it to
+  procedure candidates.
+- **Absence is not evidence.** A pattern not appearing in this window doesn't
+  mean a previous edit fixed it — the situations that would surface it may not
+  have come up. When judging whether a past pattern has diminished, distinguish
+  "diminished" from "can't tell".
 
 If any fire, stop. Restart with the sections above.
-
-## Persistence (opt-in)
-
-By default this skill prints the retro inline and writes nothing to disk. If you want a durable record — to look back later, or to feed a cross-session review — set the `RETROSPECTIVE_DIR` environment variable.
-
-Persist only if `RETROSPECTIVE_DIR` is set (check via shell). If unset, print inline and stop; do not propose creating directories or files.
-
-When `RETROSPECTIVE_DIR` is set:
-
-- Write one file per retro: `$RETROSPECTIVE_DIR/YYYY-MM-DD-HHMMSS.md`, timestamp from shell `date`.
-- File contents = the rendered Output Shape, unchanged.
-- Confirm the resolved path with the user once before the first write of a session; write subsequent retros in that session without re-confirming.

@@ -1,15 +1,15 @@
 # retrospective
 
-A post-session improvement loop. Inspects what worked, what failed, and turns useful lessons into concrete skill edits or memory entries.
+A cross-session improvement loop. Distils several session transcripts into structured notes, audits across them for recurring patterns, and turns those into concrete skill edits or follow-up notes.
 
 See [`SKILL.md`](./SKILL.md) for the full process, sort table, output shape, and red flags.
 
 ## When to invoke
 
-- "How did that go?" / "retro" / "what did we learn"
-- End of a feature or task, after commit, before moving on
+- Fortnightly / end of a milestone / "let's do a retro"
+- "What's been recurring?" / "what did we learn?" / "review the last few sessions"
 
-Not for mid-task check-ins.
+Not for single-session end-of-task review or mid-task check-ins. The unit of analysis is several sessions, not one.
 
 ## Install
 
@@ -28,14 +28,8 @@ cp -R skills/retrospective ~/.codex/skills/
 
 Substitute your agent's skill directory if not Codex.
 
-## Configuration
+## Persistence
 
-By default, retros print inline and write nothing to disk.
+The retro prints inline. The only files it writes are the per-session intermediate notes, into a throwaway tmp dir (`mktemp -d`). No configuration or env var needed.
 
-To keep a durable record — to look back later, or to feed a cross-session review of your own — set:
-
-```sh
-export RETROSPECTIVE_DIR=~/path/to/retros
-```
-
-When set, each retro is written to `$RETROSPECTIVE_DIR/YYYY-MM-DD-HHMMSS.md`. If unset, the skill never touches the filesystem.
+Session transcripts (the input) live in different places per agent and host — the skill asks where they are if the location isn't obvious. To flag something for the next retro mid-session, just say "remember X for retro"; it lands in the transcript and the distil step picks it up.
