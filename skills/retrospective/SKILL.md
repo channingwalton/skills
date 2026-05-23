@@ -42,6 +42,8 @@ Triggers:
 | How user likes to work | Proposed user-preference note, if the agent has a durable memory system |
 | Project/team fact | Proposed project documentation or issue update |
 | Domain term | Proposed glossary or documentation entry |
+| Same finding recurs (user notes "we've hit this before" or memory shows prior entries) | Promote: propose a new skill file — a one-line rule clearly isn't holding it |
+| Multi-step recipe that worked and is reusable | Procedure candidate (see Output Shape) — a rule-line wouldn't carry the sequence |
 
 Rule of thumb: *would a developer on another project benefit?* Yes → skill. No → propose the smallest durable place to record it. If no such place exists, keep it in the retrospective output as a follow-up note.
 
@@ -75,6 +77,21 @@ One rule per paragraph, one example max. Skills bloat when every retro adds thre
 ## Proposed follow-up notes
 - <destination or type>: <entry>
 
+## Proposed procedure candidates
+1. Name: <short verb-led title>
+   Trigger: <when to invoke>
+   Steps:
+     1. <step>
+     2. <step>
+   Destination: <new skill file path> or <existing skill + section>
+   Why a procedure, not a rule: <one sentence>
+
+## Proposed skill promotions
+1. Pattern: <one-line description>
+   Recurrence evidence: <prior sessions / memory entries / user statement>
+   Destination: <new skill file path + proposed name>
+   Why promote: <one sentence — why a line-edit isn't enough>
+
 Apply these?
 ```
 
@@ -87,7 +104,7 @@ Apply these?
 - **Pure analysis.** Paragraphs of reflection with no concrete change attached.
 - **Premature application.** Applying edits before the user says yes.
 - **Layer mixing.** A project fact bundled into a skill-rule finding. Project facts → follow-up notes/project docs; skill rules → skill files.
-- **Sprawl.** A finding that needs 30 lines is a rewrite, not a retro.
+- **Sprawl.** A finding that needs 30 lines is a rewrite, not a retro — *unless* it's a genuine multi-step procedure, in which case route it to Proposed procedure candidates rather than collapsing it to a one-liner.
 
 If any fire, stop. Restart with the sections above.
 
