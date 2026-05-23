@@ -108,6 +108,18 @@ Apply these?
 
 If any fire, stop. Restart with the sections above.
 
+## Persistence (opt-in)
+
+This skill does **not** write retro outputs to disk by default. Persisting retros only makes sense when paired with a meta-retro that aggregates them — silent file creation in shared use is a footgun.
+
+Persist only if the environment variable `RETROSPECTIVE_DIR` is set (check via shell). If unset, print the retro inline and stop. Do not propose creating directories or files.
+
+When `RETROSPECTIVE_DIR` is set:
+
+- Write one file per retro: `$RETROSPECTIVE_DIR/YYYY-MM-DD-HHMMSS.md`, timestamp from shell `date`.
+- File contents = the rendered Output Shape, unchanged.
+- Confirm the resolved path with the user once before the first write of a session; write subsequent retros in that session without re-confirming.
+
 ## Meta
 
 This skill is itself subject to retrospection. If a retro using this skill surfaces a gap in *this* skill, edit `SKILL.md` here. Same loop.
