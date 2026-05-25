@@ -1,91 +1,64 @@
 ---
 name: fix-loop
-description: Iterative Codex-native review-fix cycle that orchestrates code-reviewer and fixer to eliminate critical issues. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or any request that combines finding problems with resolving them automatically.
+description: Iterative review-fix cycle that orchestrates code-reviewer and fixer to eliminate Critical issues. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
 ---
 
 # Fix Loop
 
-Autonomous review-fix cycle that iterates until all critical issues are resolved.
+Run a bounded review-fix cycle until all Critical issues are resolved, marked unfixable, or the iteration cap is hit.
 
-This skill orchestrates `code-reviewer` for the read-only review phase and `fixer` for targeted repairs. If either skill is unavailable, follow the review and fix rules embedded here.
+`fix-loop` orchestrates:
 
-The value of this skill is that it separates *finding* problems from *fixing* them. First review in a read-only, disconfirming posture. Then apply minimal targeted fixes. Do not rationalise away findings because you are about to edit the code.
+- `code-reviewer` for read-only, disconfirming review
+- `fixer` for minimal targeted repairs
+
+Keep those roles separate. Do not rationalise away findings because you are about to edit the code.
 
 ## Input
 
-One of:
+Use the supplied files/directories when present. With no explicit scope:
 
-- File path(s) to review
-- Directory to scan
-- No argument — automatically determines scope
+1. uncommitted changes: `git diff --name-only` plus `git diff --name-only --staged`
+2. otherwise recent work: `git diff --name-only HEAD~3`
+3. otherwise ask what to review
 
-## Execution
+## Baseline
 
-### Step 1: Determine Scope
+Before fixing, run the project's canonical verification command if discoverable from README, CONTRIBUTING, build scripts, package manager scripts, Makefile, or workspace instructions. Record pass/fail/unavailable so later failures can be separated from regressions.
 
-Determine which files to review, in priority order:
+## Loop
 
-1. If the user specified files/directories, use those
-2. If there are uncommitted changes: `git diff --name-only` (unstaged) + `git diff --name-only --staged` (staged)
-3. If there are recent commits: `git diff --name-only HEAD~3`
-4. If none of the above apply, ask the user what to review
+Maximum 3 iterations.
 
-### Step 2: Baseline Test Check
+For each iteration:
 
-Run the project's canonical verification command before making any changes. Find it from README/CONTRIBUTING, build scripts, package manager scripts, Makefile, or workspace instructions. Record the result — this is needed later to distinguish pre-existing failures from regressions introduced by fixes. Do not skip this step — "the diff is small" or "I just ran tests" are not exceptions; the baseline exists for cases where the fixer changes more than expected.
+1. REVIEW - announce `Review iteration N/3`; use `code-reviewer` against the current scope. If the user explicitly asks for subagents, a bounded read-only reviewer can be separate from the fixing agent.
+2. TRIAGE - extract only Critical findings. If none remain, stop.
+3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; use `fixer` when available. Fix only Critical findings. Preserve user changes and avoid unrelated refactors.
+4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
+5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.
 
-### Step 3: Review-Fix Loop
+Warnings and suggestions are reported, not auto-fixed.
 
-Set `iteration = 1` and `scope = <initial files>`.
-
-**LOOP** while `iteration <= 3`:
-
-Three iterations is the cap because experience shows that if critical findings persist beyond 3 cycles, the remaining issues typically need human judgement rather than automated fixing. The cap prevents wasted cycles.
-
-1. **REVIEW (iteration N)** — Announce: `Review iteration N/3`
-   - Use the `code-reviewer` skill locally against the current scope.
-   - If the user explicitly asked for subagents, a bounded `explorer` can do read-only review and a separate `worker` can own the fix. Otherwise do the loop locally.
-   - Produce concrete findings with file paths and line numbers.
-
-2. **TRIAGE** — Extract only **Critical** findings from the report
-   - If **zero** critical findings, break — the loop is done
-   - List the critical findings for visibility
-   - Only critical findings are actioned because warnings and suggestions are judgement calls best left to the author. Automating fixes for subjective issues risks introducing changes the user disagrees with.
-
-3. **FIX (iteration N)** — Announce: `Fix iteration N/3 — addressing N critical issue(s)`
-   - Use the `fixer` skill for targeted repairs when available.
-   - Fix only the critical findings.
-   - Preserve user changes and avoid unrelated refactors.
-   - Record fixed, unfixable, files modified, and test status.
-
-4. **NARROW SCOPE** — Set `scope` to the files listed in the fixer's "Files Modified" output
-   - If the fixer modified files *not* in the original scope, include those too — fixes can introduce issues in new files
-   - If no files were modified (all findings were unfixable), break to the final report
-
-5. **INCREMENT** — `iteration += 1`
-
-**END LOOP**
-
-### Step 4: Final Report
-
-Announce: `Fix loop complete`
+## Final Report
 
 ```markdown
 # Fix Loop Report
 
-## Iterations: N/3
+## Iterations
+N/3
 
-## Resolved (Critical)
-- [file:line] [issue] — fixed in iteration N
+## Resolved
+- [file:line] [issue] - fixed in iteration N
 
-## Remaining (Critical)
-- [file:line] [issue] — reason not fixed
+## Remaining Critical
+- [file:line] [issue] - [reason]
 
-## Noted (Warning / Suggestion)
-- [file:line] [issue] — from iteration N (not actioned)
+## Noted
+- [file:line] [Warning/Suggestion] - not actioned
 
 ## Test Status
-[Compare against baseline from Step 2. Report regressions vs pre-existing failures.]
+[baseline vs final, including unavailable checks]
 ```
 
 Do not commit. Callers decide when to commit.
