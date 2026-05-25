@@ -17,6 +17,12 @@ description: Software development based on Extreme Programming (XP). Use it when
 
 The DEVELOP cycle is a task's Definition of Done: **no task is complete until the review step passes**. Review is inside the cycle, not after it.
 
+## Skills this depends on
+
+- **`fix-loop`** — the DEVELOP review step (Phase 2, Step 4) delegates to it. It in turn drives `code-reviewer` and `fixer`.
+- **`retrospective`** — suggested at COMPLETE (Phase 5).
+- **Language skill** — Red and Green steps use the appropriate language skill when one is installed (e.g. `scala-developer`, `unison-development`). Not published in this repo.
+
 ---
 
 ## Phase 1: Planning (📋 PLAN) — Interactive
