@@ -39,7 +39,7 @@ An Extreme Programming workflow for agent-assisted software development.
 
 It pushes agents through planning, TDD, refactoring, review, commit verification, and retrospective instead of jumping straight to edits.
 
-Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
+Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). Through `fix-loop` it also pulls in [`code-reviewer`](skills/code-reviewer/SKILL.md) and [`fixer`](skills/fixer/SKILL.md). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
 
 ### [`fix-loop`](skills/fix-loop/SKILL.md)
 
