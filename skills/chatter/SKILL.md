@@ -7,49 +7,35 @@ description: Use when the user asks you to start, join, or continue a conversati
 
 Filesystem-based multi-agent chat. Messages are markdown files (YAML frontmatter + body) in a shared thread directory. No network.
 
-Core behaviour: **loop** — read new messages → reply if useful → wait → repeat → exit when resolved or silent.
+Core behaviour: read new messages -> reply if useful -> wait -> repeat -> exit when resolved or silent.
 
 ## The helper
 
-All filesystem mechanics live in a `chatter` script bundled with this skill (next to `SKILL.md`). **Resolve its absolute path once at session start** and reuse — examples below show it as bare `chatter`. Invoke it as the literal first token (`/abs/path/chatter post …`); don't lead with a shell-variable assignment (`CH=…; "$CH" post`) — that defeats the `chatter:*` permission matcher and triggers the auto-mode classifier.
+All filesystem mechanics live in the bundled `chatter` script next to `SKILL.md`. Resolve its absolute path once and invoke that path as the first command token. Examples below use `chatter` for readability.
 
 ```sh
-chatter post <slug> <agent-id> <content> [--in-reply-to ID]   # → prints filename
-chatter read <slug> [--since FILENAME] [--wait-create SEC] # → JSON array of messages
-chatter wait <slug> [--timeout SEC]    [--wait-create SEC] # → exit 0 on event, non-zero on timeout or watcher error
+chatter post <slug> <agent-id> <content> [--in-reply-to ID]   # prints filename
+chatter read <slug> [--since FILENAME] [--wait-create SEC]    # JSON messages
+chatter wait <slug> [--timeout SEC] [--wait-create SEC]       # 0 on event, non-zero on timeout/error
 chatter loop <slug> <agent-id> [--timeout SEC] [--silences N] [--since FILENAME]
-# → stateful read/wait loop; prints next non-self message batch as JSON
+# stateful read/wait loop; prints next non-self message batch as JSON
 ```
 
-**Content with shell metacharacters** (backticks, `$`, `!`, `\`, etc): never pass as a double-quoted argv string — the shell will substitute or strip them, and your code examples will silently corrupt. Two safe forms:
+Use `loop` for normal joins/rejoins. It persists cursor state in `.chatter-state/<agent>.json`, filters self-authored messages, keeps long wait defaults (`--timeout 300`, `--silences 2`), and returns when a non-self message batch arrives or silence is reached.
+
+If content contains backticks, `$`, `!`, `\`, or similar shell metacharacters, do not pass it as a double-quoted argument. Use stdin:
 
 ```sh
-# 1. Heredoc to stdin (use "-" as content arg)
 chatter post <slug> <you> - --in-reply-to <id> <<'EOF'
 Use `Array.prototype.flat()` not $foo.
 EOF
-
-# 2. Single-quoted argv (only safe if content has no single quotes)
-chatter post <slug> <you> 'Use `flat()` not $foo.' --in-reply-to <id>
 ```
 
-Default to form 1 — heredoc with `'EOF'` (quoted) disables all expansion and handles any content.
+## Root and Time
 
-`--wait-create SEC` (read/wait/loop): if the thread dir doesn't exist yet, poll up to SEC seconds for it to appear before failing. Use on join when the other agent may not have posted yet.
+Root resolution: `--root <path>`, then `$CHATTER_ROOT`, then `./agent-chatter`. Run from the project working directory unless all agents agree on another root. Use `--wait-create SEC` when joining a thread that another agent may not have created yet.
 
-`loop` persists the cursor in `.chatter-state/<agent>.json` inside the thread directory, filters out self-authored messages, keeps the normal long wait policy (`--timeout 300`, `--silences 2`), and exits when it has the next non-self message batch. Use it for the routine join/rejoin wait instead of manually carrying `LAST_SEEN` between shell calls. After posting a reply, call `loop` again.
-
-**Root resolution** (in order):
-
-1. `--root <path>` flag (per-call override)
-2. `$CHATTER_ROOT` env var (session-wide override)
-3. `./agent-chatter` (default — scopes chats to the current project)
-
-Run from the project's working directory so chats land in `./agent-chatter/{slug}/`. All agents must agree on root — same CWD, or all export the same `CHATTER_ROOT`. Use the helper — don't hand-roll JSON or filenames.
-
-**Requirements:** `python3` in `PATH`. Uses `fswatch` (macOS) or `inotifywait` (Linux) for `wait`; falls back to 2s polling otherwise. Filename order is the protocol order; `created_at` (local-timezone ISO 8601 with offset) is diagnostic only.
-
-**Timezones:** all timestamps — both the slug `{yyyyMMdd-HHmm}` and `created_at` — use the host's local timezone. Generate slug timestamps with bare `date` (no `-u`).
+Requires `python3`. `wait` uses `fswatch`, `inotifywait`, or polling. Filename order is protocol order; `created_at` is diagnostic. Slug timestamps and message timestamps use local time; generate slugs with plain `date`, not UTC.
 
 ## Agent identity
 
@@ -63,8 +49,8 @@ Pick a stable `agent-id` for this conversation, in order:
 
 | Action | Steps |
 |---|---|
-| **Start** | slug = `{yyyyMMdd-HHmm}-{kebab-topic}` → `chatter post <slug> <you> "<opening>"` (creates dir) → tell the user `Instruction for other agents: join chatter <slug>` → enter loop immediately. Don't ask the user to invite anyone — just post and wait. The first iteration's `wait` is how you wait for joiners. |
-| **Join** | `chatter loop <slug> <you> --wait-create 300` to catch up and wait for the next non-self message batch (on timeout the slug is wrong or no one replied — ask the user only if the thread never appears) → reply if useful → call `loop` again |
+| **Start** | slug = `{yyyyMMdd-HHmm}-{kebab-topic}`; `chatter post <slug> <you> -` creates the thread; tell the user `Instruction for other agents: join chatter <slug>`; enter `loop` immediately. |
+| **Join** | `chatter loop <slug> <you> --wait-create 300`; reply if useful; call `loop` again. Ask the user only if the thread never appears. |
 
 ## Replying
 
@@ -74,53 +60,17 @@ Pick a stable `agent-id` for this conversation, in order:
 
 Use `chatter loop` — it handles cursor persistence, self-message filtering, and the wait/silence policy. Each call returns when the next non-self message batch arrives (or after `--silences` consecutive timeouts). Pattern:
 
-```
+```sh
 chatter loop <slug> <you> [--wait-create 300]   # join: catch up + wait
-# → exit 0 with status:messages → reply if useful
-chatter post <slug> <you> "..." --in-reply-to <target.id>
+# exit 0 with status:messages -> reply if useful
+chatter post <slug> <you> - --in-reply-to <target.id>
 chatter loop <slug> <you>                        # rejoin: wait for next batch
-# → exit 1 with status:silent → conversation done
+# exit 1 with status:silent -> conversation done
 ```
 
-Exit codes: `0` = new messages, `1` = silent (timed out `--silences` times), `2` = iteration cap. On `messages`, decide whether to reply; if yes, post and call `loop` again. On `silent` or after an explicit sign-off, exit.
+Exit codes: `0` new messages, `1` silent, `2` iteration cap. On `messages`, reply only when adding information, disagreement, a clarifying question, or a next step. Acks do not need replies. On `silent`, resolution, or explicit sign-off, exit.
 
-### Judging substance and resolution
-
-`loop` returns any non-self batch. You still decide:
-
-- **Reply?** Only when adding info, disagreement, a clarifying question, or a next step. Acks don't need a reply.
-- **Resolved?** Question answered, decision made, all sides had their say, or someone signed off explicitly.
-- **Circling?** If you and the other agent are restating the same points, call it out and propose a conclusion.
-
-### Manual fallback
-
-If you need to debug protocol issues or do unusual work, the primitives are still available. After `wait` returns, **always re-run `read`** — the wake may have fired on a `.tmp` or your own write.
-
-```
-timeout_count = 0
-iterations = 0
-MAX_ITERATIONS = 20
-
-while iterations < MAX_ITERATIONS:
-    iterations += 1
-    msgs = chatter read <slug> --since $LAST_SEEN
-    new = [m for m in msgs if m.from != self]
-
-    if new:
-        LAST_SEEN = last(msgs).id + ".md"
-        if any_substantive(new):
-            timeout_count = 0
-        if you_have_something_substantive_to_add:
-            f = chatter post <slug> <you> "..." --in-reply-to <target.id>
-            LAST_SEEN = f
-        if conversation_resolved:
-            break
-    else:
-        if not chatter wait <slug> --timeout 300:
-            timeout_count += 1
-            if timeout_count >= 2:
-                break
-```
+If the thread circles, call that out and propose a conclusion. For protocol debugging, use `read` and `wait` directly; after `wait`, always re-run `read` because the wake may be from a temp file or your own write.
 
 ## Report to user
 
@@ -131,9 +81,7 @@ while iterations < MAX_ITERATIONS:
 
 - Hand-roll JSON or filenames — use `chatter post`.
 - Omit `--in-reply-to` on a reply — every non-opening post must set it to the id of the message being addressed.
-- Skip the `from != self` filter — you'll reply to yourself.
-- Forget to update `LAST_SEEN` after each `read`/`post` — you'll re-process the same message.
 - Auto-create on join — wait with `--wait-create` for the other agent's first post; only ask the user if it times out.
 - Forge another agent's `from` field.
 - Ask the user "want me to invite agent X?" or otherwise pause for permission before joiners arrive. Post the opener and start the loop; the user is responsible for bringing other agents in.
-- Wrap content in double quotes when it contains backticks, `$`, or `!` — the shell will mangle it. Use the heredoc + `-` form.
+- Wrap content in double quotes when it contains shell metacharacters. Use the heredoc + `-` form.
