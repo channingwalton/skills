@@ -56,7 +56,7 @@ Write a failing test for the next behaviour. If the change threads through multi
 
 ### 🟢 Green
 
-Make only the failing test pass. Match existing style. Avoid drive-by edits to adjacent code, comments, or formatting.
+Make only the failing test pass. Avoid drive-by edits to adjacent code, comments, or formatting.
 
 If you change a public function signature, read every caller before declaring green. Compile-passing is not enough.
 

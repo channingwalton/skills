@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Read-only code review agent. Use after code changes, or when the user asks for a review, to find correctness, security, performance, maintainability, and missing-test risks.
+description: Read-only code review agent. Use when the user explicitly asks for a review, or when invoked by the fix-loop skill, to find correctness, security, performance, maintainability, and missing-test risks. Does not auto-trigger after routine code changes — software-development owns implementation review through fix-loop.
 ---
 
 # Code Reviewer
