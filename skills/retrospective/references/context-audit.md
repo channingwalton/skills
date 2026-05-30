@@ -1,0 +1,126 @@
+# Context audit (MEASURE step)
+
+Quantify where a window's context tokens went, and trace the biggest noise to
+the skill / command / habit that produced it. Aggregate across all transcripts
+in the window — this is a totals pass, not a per-session note.
+
+Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
+
+## Inputs
+
+Raw session transcripts as JSONL. Default location:
+`~/.claude/projects/**/*.jsonl`. Each line is one event; `type` is `user` /
+`assistant` / `attachment` / `system` / metadata. Message content is a list of
+blocks: `text`, `thinking`, `tool_use` (has `name`, `input`, `id`),
+`tool_result` (has `content`, `tool_use_id`, `is_error`). Map `tool_use.id` →
+`name` to attribute each result to its tool.
+
+Adjust the glob / window for the agent and host. If transcripts aren't JSONL,
+skip MEASURE.
+
+## What to compute
+
+1. **Composition** — total chars by category: `tool_result`, `tool_use_input`,
+   `hook/attachment`, `assistant_text`, `user_text`, `thinking`, meta. The
+   conversation (user+assistant text) is usually a small slice; tool I/O and
+   injected hooks dominate.
+2. **Output by tool** — sum `tool_result` chars per tool name. Two or three
+   tools (typically `Read`, `Bash`) tend to own most of it.
+3. **Noise buckets** (the "carried but unused" proxies):
+   - **Errored / denied** results (`is_error`).
+   - **Duplicate re-reads** — same `Read` path twice in one session.
+   - **Oversized dumps** — single results over ~40k chars (often subagents
+     reading whole generated files).
+   - **Repeated boilerplate** — identical `attachment` blocks across sessions
+     (hash them). Attribute by `attachment.type`: `skill_listing` and
+     `deferred_tools_delta` scale with how many skills / MCP servers are
+     installed (prune the install surface, not a file); `hook_additional_context`
+     is a plugin's SessionStart injection (disable the plugin or edit upstream,
+     never the cache).
+
+## Trace to source — the point of the step
+
+A token number is only actionable once tied to what emits it:
+
+- Recurring large `git diff` / verbose command output on a known trigger
+  (e.g. every commit) → a slash-command / skill `!`-injection. Cap or scope it.
+  *(This audit's origin: `push` skill injected `git diff HEAD` uncapped every
+  invocation; fix was stat + capped diff.)*
+- Oversized dumps in subagents → the dispatch prompt told them to read whole
+  files; pass a `jq` slice or summary instead.
+- Per-session boilerplate → installed-but-unused plugins / MCP servers, or a
+  plugin's SessionStart hook.
+
+Route each finding through the SORT table. The "Skill/command injects unused
+context" row is the common landing spot.
+
+## Script
+
+Plain `python3`, stdlib only. Edit the glob and window.
+
+```python
+import json, os, glob, time, collections, hashlib
+
+DAYS = 7
+files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
+         if time.time() - os.path.getmtime(f) < DAYS*86400]
+
+def blocks(c):
+    return c if isinstance(c, list) else ([{'type':'text','text':c}] if isinstance(c, str) else [])
+
+cat = collections.Counter()        # category -> chars
+tool_out = collections.Counter()   # tool name -> tool_result chars
+err = dup = oversize = 0
+hook_hash = collections.Counter(); hook_size = {}
+
+for f in files:
+    id2name = {}
+    for line in open(f, errors='ignore'):
+        try: o = json.loads(line)
+        except: continue
+        t = o.get('type')
+        if t == 'attachment':
+            s = json.dumps(o.get('attachment', {}))
+            h = hashlib.md5(s.encode()).hexdigest()
+            hook_hash[h] += 1; hook_size[h] = len(s)
+            cat['hook/attachment'] += len(s); continue
+        if t not in ('user', 'assistant'): continue
+        for b in blocks(o.get('message', {}).get('content', [])):
+            bt = b.get('type'); role = o.get('message', {}).get('role', t)
+            if bt == 'text':
+                cat['assistant_text' if role == 'assistant' else 'user_text'] += len(b.get('text', ''))
+            elif bt == 'thinking':
+                cat['thinking'] += len(b.get('thinking', ''))
+            elif bt == 'tool_use':
+                id2name[b.get('id')] = b.get('name')
+                cat['tool_use_input'] += len(json.dumps(b.get('input', {})))
+            elif bt == 'tool_result':
+                c = b.get('content', ''); s = c if isinstance(c, str) else json.dumps(c)
+                cat['tool_result'] += len(s)
+                name = id2name.get(b.get('tool_use_id'), '?'); tool_out[name] += len(s)
+                if b.get('is_error'): err += len(s)
+                if len(s) > 40000: oversize += len(s)
+
+tok = lambda c: c // 4
+tot = sum(cat.values())
+print(f"files={len(files)} total~tok={tok(tot):,}\n")
+for k, v in cat.most_common():
+    print(f"{k:18}{tok(v):>10,}  {100*v/tot:5.1f}%")
+print("\noutput by tool (top):")
+for k, v in tool_out.most_common(12):
+    print(f"  {k:24}{tok(v):>9,}")
+dupe_boiler = sum(hook_size[h]*(n-1) for h, n in hook_hash.items() if n > 1)
+print(f"\nerrors~tok={tok(err):,}  oversize>40k~tok={tok(oversize):,}  repeated-boilerplate~tok={tok(dupe_boiler):,}")
+print("\nmost-repeated injected blocks:")
+for h, n in hook_hash.most_common(6):
+    if n > 1: print(f"  x{n:<4}{hook_size[h]:>7,}c each")
+```
+
+For duplicate-read and per-path detail, also map `tool_use.id` → `input.file_path`
+and count repeats per path within a session (omitted above for brevity).
+
+## Output
+
+Feed the numbers into the retro's normal PROPOSE shape. One line per finding:
+the token cost, the source, the concrete edit. Don't report a category total
+without naming what to change.

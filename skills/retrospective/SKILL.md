@@ -37,12 +37,16 @@ status reports. The unit of analysis is *several sessions*, not one.
 1. DISTIL   — For each transcript in the window, in isolation: read it, write
               a structured intermediate note to a tmp dir. One transcript at a
               time; do not load them all into context together.
-2. AUDIT    — Read the intermediate notes. Two lists: recurring worked /
+2. MEASURE  — One aggregate pass over the whole window: where did context
+              tokens go (per-tool output, hook/injection bloat, unused dumps)?
+              See `references/context-audit.md`. Skip only if transcripts are
+              unavailable as raw JSONL.
+3. AUDIT    — Read the intermediate notes. Two lists: recurring worked /
               recurring didn't, with note references per item.
-3. SORT     — Prioritise: consolidate > promote > procedure > one-line edit.
-4. PROPOSE  — Write exact edits (before/after).
-5. CONFIRM  — Ask "apply these?" — do nothing without a yes.
-6. APPLY    — Edit the canonical source, verify the loaded file changed, and
+4. SORT     — Prioritise: consolidate > promote > procedure > one-line edit.
+5. PROPOSE  — Write exact edits (before/after).
+6. CONFIRM  — Ask "apply these?" — do nothing without a yes.
+7. APPLY    — Edit the canonical source, verify the loaded file changed, and
               report the landed path. Follow symlinks; never edit versioned
               plugin/cache copies that will be overwritten.
 ```
@@ -66,13 +70,26 @@ Each note should capture:
 Save as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md`; get the timestamp from shell
 `date`.
 
-### 2. AUDIT
+### 2. MEASURE
+
+One aggregate pass over the raw transcript JSONL for the window — not per
+session. Quantify where context went: tool-result output by tool, hook /
+injection bloat, and content that was never used (errors, duplicate re-reads,
+oversized dumps, repeated boilerplate). Trace the biggest noise back to its
+source — a skill or slash-command `!`-injection, a verbose command, a full-file
+read — so the finding routes to a concrete edit.
+
+`references/context-audit.md` holds the script and the noise heuristics. Skip
+this step only when the transcripts aren't available as raw JSONL.
+
+### 3. AUDIT
 
 Read the notes back. Build **recurring worked** and **recurring didn't** lists,
 with note references per item. Do not escalate single-session findings unless
-high-severity.
+high-severity. Fold MEASURE findings in: a token-heavy injection or dump is a
+recurring finding if it spans multiple sessions.
 
-### 3. SORT
+### 4. SORT
 
 Prioritise: consolidate duplicate rules; promote repeated one-line rules into
 new skills or sections; extract recurring multi-step recipes; otherwise propose
@@ -100,7 +117,7 @@ in repo guidance, project docs, issue comments, or follow-up notes instead.
 Rule of thumb: if a developer on another project would benefit, propose a skill
 edit. Otherwise use the smallest durable project/local destination.
 
-### 4. PROPOSE
+### 5. PROPOSE
 
 ```
 File: <path>
