@@ -7,7 +7,7 @@ description: Iterative review-fix cycle that orchestrates code-reviewer and fixe
 
 Run a bounded review-fix cycle until all Critical issues are resolved, marked unfixable, or the iteration cap is hit.
 
-`fix-loop` orchestrates:
+`fix-loop` orchestrates two **Skills** — invoke each with the Skill tool. There is no `code-reviewer` or `fixer` subagent_type; `Task(subagent_type: "code-reviewer")` fails with "Agent type not found". Use `Skill(code-reviewer)` / `Skill(fixer)`.
 
 - `code-reviewer` for read-only, disconfirming review
 - `fixer` for minimal targeted repairs
