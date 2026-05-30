@@ -58,6 +58,7 @@ Each note should capture:
 - wrong paths pursued and why
 - late-discovered failures or edge cases
 - test-quality observations
+- context waste: large tool outputs that went unused; note the producing tool, command, or skill `!`-injection
 - rules invoked, skipped, or missing
 - explicit "remember X for retro" markers, verbatim
 - candidate findings
@@ -82,6 +83,7 @@ Use this table to decide where each finding lands:
 | Finding | Goes to |
 |---------|---------|
 | Rule that applies to any project | Skill file edit |
+| Skill/command injects unused context (e.g. `!`-injected full diff) | Skill/command edit: cap or scope the injection |
 | Discipline slipped (knew rule, skipped it) | Skill edit plus a Red Flags entry naming the rationalisation |
 | Codebase-specific tripwire | Proposed project note, issue comment, or documentation update |
 | Recurring project tripwire | Repo guidance such as `AGENTS.md`, `CLAUDE.md`, `README.md`, or process docs |
