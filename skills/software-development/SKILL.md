@@ -13,14 +13,13 @@ The workflow is:
 2. 🔴 DEVELOP - red, green, refactor, review.
 3. 💾 COMMIT - only when requested or confirmed.
 4. 🔁 ITERATE - repeat until the agreed scope is done.
-5. ✅ COMPLETE - suggest retrospective when useful.
+5. ✅ COMPLETE - disconfirm the result.
 
 No task is done until the review step passes or an explicit low-risk exception is recorded.
 
 ## Related Skills
 
 - `fix-loop` - use for the DEVELOP review step. It drives `code-reviewer` and `fixer`; do not also run `code-reviewer` on the same diff.
-- `retrospective` - suggest at COMPLETE when the work exposed repeated workflow gaps.
 - Language skill - use the relevant language skill for Red and Green when one is installed.
 
 ## 📋 PLAN
@@ -97,7 +96,13 @@ Mark a task done only after DEVELOP review passes or the targeted-verification e
 
 ## ✅ COMPLETE
 
-When the agreed scope is done, report the change and verification. Suggest `retrospective` only when the work exposed repeated friction or workflow gaps.
+Before reporting the scope done, disconfirm it — this is the FALSIFY step from PLAN, applied to the result instead of the understanding:
+
+1. For each behaviour you are about to call done, name the single check that would prove that claim **false**, then run it. Apply the Grounding Checks below: a claim that something *works* or *changed* is grounded by inspecting the real artifact (the rendered element, the served response, the actual file) — not by re-reading the code or trusting a green suite.
+2. A passing test counts only once you have confirmed it exercises the new behaviour — that it fails when the behaviour is removed, not merely that the suite is green.
+3. If a check cannot be run, report that behaviour as **unverified**, not done.
+
+Then report the change and the verification you ran.
 
 ## Grounding Checks
 
