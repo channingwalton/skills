@@ -69,7 +69,7 @@ Depends on: no other skills.
 
 A post-session improvement loop.
 
-Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or follow-up notes. Prints its retro inline; the only files it writes are throwaway per-session notes. See the [skill README](skills/retrospective/README.md) for details.
+Use it when you want to inspect what worked, what failed, and turn useful lessons into concrete skill edits or follow-up notes. See the [skill README](skills/retrospective/README.md) for details.
 
 Depends on: no other skills.
 

@@ -30,7 +30,7 @@ analysis is several sessions, not one.
 
 - **Cost-weighted, not count-based.** One expensive misdirection outweighs a
   tail of papercuts; the headline is wasted effort, not a failure count.
-- **Actuator placement.** Each fix goes to the latest-costing actuator that
+- **Actuator placement.** Each fix goes to the lowest-costing actuator that
   prevents it (a gate that costs nothing until it fires beats a CLAUDE.md line
   that taxes every session). It resists answering failures with more standing
   context.
