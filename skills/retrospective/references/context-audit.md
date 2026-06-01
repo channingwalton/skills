@@ -1,8 +1,16 @@
 # Context audit (MEASURE step)
 
-Quantify where a window's context tokens went, and trace the biggest noise to
-the skill / command / habit that produced it. Aggregate across all transcripts
-in the window — this is a totals pass, not a per-session note.
+The MEASURE step has two outputs. This file covers both, but only the first is
+scriptable:
+
+1. **Context waste** (scriptable) — quantify where a window's context tokens
+   went, and trace the biggest noise to the skill / command / habit that
+   produced it. Aggregate across all transcripts in the window — a totals pass,
+   not a per-session note.
+2. **Cost per failure** (manual) — tally the wasted calls/tokens each isolated
+   failure cost, so the retro's headline is cost-weighted not count-based. This
+   is a judgement tally over the DISTIL notes, not a script output — see "Cost
+   per failure" below for why.
 
 Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 
@@ -36,7 +44,10 @@ skip MEASURE.
      `deferred_tools_delta` scale with how many skills / MCP servers are
      installed (prune the install surface, not a file); `hook_additional_context`
      is a plugin's SessionStart injection (disable the plugin or edit upstream,
-     never the cache).
+     never the cache). Note these are the **most expensive actuator class** in
+     the SORT ordering — a standing per-session tax paid whether or not the
+     installed thing is used. Pruning the install surface is a gate-vs-wallpaper
+     call: it removes an always-on cost, so it often beats any in-file edit.
 
 ## Trace to source — the point of the step
 
@@ -118,6 +129,27 @@ for h, n in hook_hash.most_common(6):
 
 For duplicate-read and per-path detail, also map `tool_use.id` → `input.file_path`
 and count repeats per path within a session (omitted above for brevity).
+
+## Cost per failure (manual — not scripted)
+
+The script above attributes *context* tokens to *tools*. It cannot attribute
+*wasted* tokens to *failures*, and you should not extend it to try. Deciding
+which calls belong to a given failure — from its first wrong turn to its
+resolution — is the same judgement as isolating the failure in the first place
+(DISTIL Step 0), and it does not separate mechanically from interleaved work: a
+session rarely does one thing at a time, so "calls spent on this failure" is a
+read, not a count. A script that claims it will produce confident nonsense.
+
+Do it by hand over the DISTIL notes. For each isolated failure, an approximate
+cost is fine: count the tool calls (and roughly their tokens, `chars/4`) between
+the first wrong turn and the point the model recovered. Flag it as approximate;
+do not present it as attribution the interleaving won't support. The number only
+needs to be good enough to separate an expensive misdirection (e.g. ten calls
+down a false hypothesis) from a cosmetic self-correction (one call, immediately
+fixed) — that ranking is the point, not the precise figure.
+
+This is what makes the retro headline cost-weighted: one expensive failure can
+outweigh a tail of papercuts, and a count-based ratio would hide that.
 
 ## Output
 

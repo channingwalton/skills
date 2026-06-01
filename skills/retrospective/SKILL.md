@@ -1,17 +1,33 @@
 ---
 name: retrospective
-description: Use on a fortnightly or post-milestone cadence, or when the user says "retrospective" / "retro" / "what's been recurring" / "what did we learn" / "review the last few sessions". Reads multiple session transcripts, distils each, and proposes targeted skill edits for patterns that recur across them. Not for single-session end-of-task review.
+description: Use on a fortnightly or post-milestone cadence, or when the user says "retrospective" / "retro" / "what's been recurring" / "what did we learn" / "review the last few sessions". Reads multiple session transcripts, distils each, measures token-weighted wasted effort, and proposes targeted config edits — placed at the cheapest-to-run actuator that prevents the failure — then verifies that prior retros' edits actually reduced the cost they targeted. Not for single-session end-of-task review.
 ---
 
 # Retrospective
 
-Run across several sessions, not one. Distil each transcript separately, audit
-the notes for recurring patterns, then propose concrete changes to the files
-that guide future agent behaviour: skill files, repo instruction files such as
-`AGENTS.md` or `CLAUDE.md`, README/process docs, or explicit follow-up notes.
+Run across several sessions, not one. The job is to reduce **token-weighted
+wasted effort** in future sessions: calls and tokens spent on wrong paths,
+misdirections, revisions, and incorrect tool use that a correctly-applied
+actuator would have avoided.
 
-Every useful finding must produce an exact proposed edit or follow-up note.
-Single-session findings are noted but only escalated if high-severity.
+This is a closed control loop. Sessions are the only sensor. The actuators (the
+things you can change) are, ordered by how expensive they are to keep running:
+
+| Actuator | When it costs tokens | Prefer for |
+|----------|---------------------|------------|
+| Gate / hook (config) | Only when the guarded action fires | Failures preventable at the point of action |
+| Skill / command | Only when invoked | Failures needing context at a specific moment |
+| Agent / config / tool surface | Structurally, per session frame | Failures from topology, delegation, tool availability |
+| CLAUDE.md / AGENTS.md standing context | Every session, relevant or not | Last resort — always-on token tax |
+
+Two things are **not** actuators and must never be the proposed fix: the model
+itself (you cannot tune it — see `present-contradicted` below), and the task
+distribution (you observe the failures your actual work surfaces, not a uniform
+sample).
+
+Every useful finding must produce an exact proposed edit or follow-up note,
+placed at the **latest-costing actuator that can prevent it**. Single-session
+findings are noted but only escalated if high-severity.
 
 ## When to Use
 
@@ -30,25 +46,34 @@ status reports. The unit of analysis is *several sessions*, not one.
    not known, ask. If transcripts are unavailable, stop.
 2. The review window must be defined: last fortnight, last N sessions, since
    last retro, or a supplied file list. If unspecified, ask.
+3. The VERIFY ledger must be locatable. It is a small file the retro writes to
+   itself and reads at the next retro; it can live anywhere the host keeps
+   durable state across sessions (a notes store, a repo, a config dir — the
+   skill does not prescribe). If its location is not known, ask. If none exists,
+   this is the first run — VERIFY is skipped and the ledger is created at APPLY
+   in a location the user confirms.
 
 ## The Process
 
 ```
-1. DISTIL   — For each transcript in the window, in isolation: read it, write
-              a structured intermediate note to a tmp dir. One transcript at a
-              time; do not load them all into context together.
-2. MEASURE  — One aggregate pass over the whole window: where did context
-              tokens go (per-tool output, hook/injection bloat, unused dumps)?
-              See `references/context-audit.md`. Skip only if transcripts are
-              unavailable as raw JSONL.
-3. AUDIT    — Read the intermediate notes. Two lists: recurring worked /
-              recurring didn't, with note references per item.
-4. SORT     — Prioritise: consolidate > promote > procedure > one-line edit.
-5. PROPOSE  — Write exact edits (before/after).
-6. CONFIRM  — Ask "apply these?" — do nothing without a yes.
-7. APPLY    — Edit the canonical source, verify the loaded file changed, and
-              report the landed path. Follow symlinks; never edit versioned
-              plugin/cache copies that will be overwritten.
+1. DISTIL   — For each transcript in the window, in isolation: read it, isolate
+              genuine failures (not normal iteration), write a structured note.
+              One transcript at a time; do not load them all together.
+2. MEASURE  — One aggregate pass: where did tokens go (per-tool output, hook/
+              injection bloat, unused dumps) AND what did each failure COST in
+              wasted calls/tokens. See `references/context-audit.md`.
+3. VERIFY   — Read the ledger. For each open prior edit: was its failure mode
+              EXERCISED in this window, and if so did its cost FALL? Close the
+              loop before proposing anything new.
+4. AUDIT    — Recurring worked / recurring didn't, with note references.
+5. SORT     — Place each fix at the cheapest-to-run actuator that prevents it;
+              cap by recurrence, weight by cost.
+6. PROPOSE  — Exact edits (before/after).
+7. CONFIRM  — Ask "apply these?" — do nothing without a yes.
+8. APPLY    — Edit canonical source, verify the loaded file changed, record the
+              edit in the ledger, recording its `after` text verbatim as the
+              presence anchor. Follow symlinks; never edit
+              versioned plugin/cache copies that will be overwritten.
 ```
 
 ### 1. DISTIL
@@ -56,14 +81,51 @@ status reports. The unit of analysis is *several sessions*, not one.
 Create a tmp working dir once (`mktemp -d`). For each transcript: read one,
 write one structured note, move on. Do not load all transcripts together.
 
-Each note should capture:
+**Isolate genuine failures first — this is the judgement-heavy step.** A failure
+is output that took a wrong path, missed a constraint, or declared done
+prematurely. Exclude normal iteration:
 
-- nominal goal and what actually happened
-- wrong paths pursued and why
-- late-discovered failures or edge cases
-- test-quality observations
-- context waste: large tool outputs that went unused; note the producing tool, command, or skill `!`-injection
-- rules invoked, skipped, or missing
+- Expected red→green loops. A typechecker/compiler reporting a legitimate next
+  constraint is the loop working, NOT a failure. Discriminator: did the error
+  report a real next step (exclude), or the model's own fabrication / wrong
+  choice (count)? *Example: Unison emitting `needs {Storage}` then `needs
+  {Random}` is incremental ability discovery — exclude. Submitting a symbol that
+  does not exist and getting "couldn't figure out what X refers to" is a failure
+  — the model invented it.*
+- Retries against genuinely unknowable-in-advance state where no prior tool
+  could have surfaced the answer. Judge honestly — often one *could* have.
+
+If isolating a failure is itself ambiguous, say so. A high ambiguous rate is a
+finding: failures aren't cleanly separable from iteration in these transcripts.
+
+For each isolated failure, capture:
+
+- what went wrong and what would have prevented it
+- **was the preventing information in-window at the failure turn?** Judge by the
+  `tool_result` the model saw (not the full `toolUseResult`). Tag one of:
+  - `present-not-consulted` — info was in-window/standing context, model acted
+    before consulting it (often runs the right check correctly *elsewhere*).
+    Harness-fixable: move guidance to a point-of-action actuator.
+  - `present-contradicted` — info was surfaced and engaged with (read, even
+    restated), model proceeded against it anyway. **The floor — not
+    harness-fixable.** Do not propose an actuator fix; note and move on.
+  - `absent-via-truncation` — info was fetched but capped out of the
+    `tool_result`. Fix: the cap/summariser.
+  - `absent-via-never-retrieved` — never fetched. Fix: retrieval/ordering, or a
+    file never opened.
+  - `absent-via-compaction` — present pre-compaction, failure post-compaction.
+    Compaction dropped load-bearing signal — a finding, call it out.
+  - `cant-tell` — cannot determine (compaction boundary; or info isn't
+    tool-surfaceable). Abstain rather than force a label.
+- **cost**: wasted calls and/or wasted wall-clock attributable to the failure.
+  This is the weight that matters — a cosmetic self-correction and a ten-call
+  misdirection are not equal units.
+- the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
+  see the architectural issue", "the test didn't actually run"). These are the
+  highest-value signal and they are already in the transcript — harvest them, do
+  not build a hook to capture them.
+- context waste: large tool outputs that went unused; note the producing tool,
+  command, or skill `!`-injection
 - explicit "remember X for retro" markers, verbatim
 - candidate findings
 
@@ -73,104 +135,199 @@ Save as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md`; get the timestamp from shell
 ### 2. MEASURE
 
 One aggregate pass over the raw transcript JSONL for the window — not per
-session. Quantify where context went: tool-result output by tool, hook /
-injection bloat, and content that was never used (errors, duplicate re-reads,
-oversized dumps, repeated boilerplate). Trace the biggest noise back to its
-source — a skill or slash-command `!`-injection, a verbose command, a full-file
-read — so the finding routes to a concrete edit.
+session. Two outputs:
+
+1. **Context waste**: tool-result output by tool, hook/injection bloat, content
+   never used (errors, duplicate re-reads, oversized dumps, boilerplate). Trace
+   the biggest noise to its source — a skill/command `!`-injection, a verbose
+   command, a full-file read — so the finding routes to a concrete edit.
+2. **Cost per failure**: from the DISTIL notes, tally wasted calls/tokens per
+   isolated failure. The retro's headline is **cost-weighted, not count-based.**
+   A clean-looking percentage on a small sample of mostly-papercut failures is
+   the result to distrust — one expensive ungated failure can outweigh the
+   entire tail.
 
 `references/context-audit.md` holds the script and the noise heuristics. Skip
-this step only when the transcripts aren't available as raw JSONL.
+this step only when transcripts aren't available as raw JSONL.
 
-### 3. AUDIT
+### 3. VERIFY
+
+Close the loop on prior corrections before proposing new ones. Read the ledger.
+For each edit still marked open:
+
+1. **Excitation check first.** Did this window contain work that could trigger
+   the targeted failure mode? If not, mark `untested-this-window`, carry it
+   forward, **conclude nothing.** Absence of a failure on an un-exercised mode is
+   not evidence the edit worked. Reverting on an unobserved mode injects noise.
+2. **Presence check.** Look for the prior edit's recorded `after` text in the
+   governed file now. The ledger already stores it (see APPLY), so this needs no
+   snapshot of the original config — just confirm the edit is still literally in
+   force.
+   - Still present → the edit survives; proceed to the cost check.
+   - Gone or overwritten → someone reverted or replaced it out-of-retro. That is
+     itself the finding: the edit did not stick. Do not re-apply blindly; note
+     it and treat as `untested-this-window` for cost purposes (you cannot
+     attribute a cost change to an edit that wasn't in force).
+   Optionally, if the host makes a cheap whole-config fingerprint available (a
+   VCS revision id, or a content hash recorded at the last APPLY), a change in it
+   flags that *something* in θ moved between retros — useful as a coarse "expect
+   reduced attributability this window" hint. This is detection, not
+   attribution: it tells you something changed, not what, and it cannot recover
+   prior state. Treat it as advisory; the per-edit presence check above is the
+   load-bearing one.
+3. **If exercised and attributable:** did the targeted failure's cost fall?
+   - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
+   - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
+     second patch on top.** Stacking is integrator windup.
+
+Skip VERIFY only on the first-ever run (no ledger yet).
+
+### 4. AUDIT
 
 Read the notes back. Build **recurring worked** and **recurring didn't** lists,
 with note references per item. Do not escalate single-session findings unless
-high-severity. Fold MEASURE findings in: a token-heavy injection or dump is a
-recurring finding if it spans multiple sessions.
+high-severity. Fold MEASURE in: a token-heavy injection or dump is recurring if
+it spans multiple sessions. Fold VERIFY in: an `ineffective` prior edit is a
+recurring finding that needs a *different* actuator, not a louder same one.
 
-### 4. SORT
+Note on generality: failures that are **harness/tooling-shaped** (tool loading,
+gating, polling, path handling) are general by construction — they do not depend
+on language or paradigm, so they need no cross-paradigm recurrence test to
+promote. Do not rely on a paradigm contrast to establish generality; your work
+mix may not provide comparable populations (e.g. implementation on one side,
+investigation-only on the other).
 
-Prioritise: consolidate duplicate rules; promote repeated one-line rules into
-new skills or sections; extract recurring multi-step recipes; otherwise propose
-one-line edits.
+### 5. SORT
 
-Use this table to decide where each finding lands:
+Place each fix at the **latest-costing actuator that prevents it** (gate <
+skill/command < structural < CLAUDE.md). The instinct to add a CLAUDE.md rule is
+reaching for the most expensive actuator first — resist it.
+
+- A `present-not-consulted` failure is standing guidance that didn't get
+  consulted at the point of action. The fix is almost never *louder standing
+  guidance* (that feeds the blindness and taxes every session) — it is moving
+  the guidance to a gate or an on-demand skill that fires when the action is
+  imminent. Gated guidance fails cheap; wallpaper guidance fails expensive.
+- A `present-contradicted` failure is the floor. No actuator fixes it. Note it,
+  do not spend tokens on it.
+- Weight by cost: do not add an always-on token tax (CLAUDE.md) to prevent a
+  papercut. The prevention must cost less, over expected sessions, than the
+  failure it prevents.
+- Consolidate `confirmed-effective` edits (merge and lock — integral reset).
+  Revise `ineffective` ones rather than supplementing.
+
+Use this table for destination:
 
 | Finding | Goes to |
 |---------|---------|
-| Rule that applies to any project | Skill file edit |
-| Skill/command injects unused context (e.g. `!`-injected full diff) | Skill/command edit: cap or scope the injection |
-| Discipline slipped (knew rule, skipped it) | Skill edit plus a Red Flags entry naming the rationalisation |
-| Codebase-specific tripwire | Proposed project note, issue comment, or documentation update |
-| Recurring project tripwire | Repo guidance such as `AGENTS.md`, `CLAUDE.md`, `README.md`, or process docs |
+| Preventable at the point of action | Gate/hook in config |
+| Needs context at a specific moment | Skill/command edit (on-demand) |
+| Topology / delegation / tool availability | Agent, config, or tool-surface edit |
+| Skill/command injects unused context | Skill/command edit: cap or scope the injection |
+| Discipline slipped (knew rule, skipped it) | Prefer a gate; CLAUDE.md + Red Flags entry only if no gate is possible |
+| Rule that genuinely must be always-on and applies to any project | Skill file or CLAUDE.md (last resort) |
+| Codebase-specific tripwire | Project note, issue comment, or repo guidance |
+| Recurring project tripwire | Repo guidance (`AGENTS.md`, `CLAUDE.md`, `README.md`, process docs) |
 | User/team preference | Preference note, if durable memory exists |
-| Project/team fact | Proposed project documentation or issue update |
-| Domain term | Proposed definition in the project's documentation |
+| Domain term | Definition in project documentation |
 | Multi-step recipe that worked and is reusable | Procedure candidate |
 
 Shared-skill portability: do not encode machine-local paths, private project
 names, private tools, or one user's personal workflow into a shared skill unless
 the user explicitly asks for a local fork. Put local/project-specific findings
-in repo guidance, project docs, issue comments, or follow-up notes instead.
+in repo guidance, project docs, issue comments, or follow-up notes.
 
 Rule of thumb: if a developer on another project would benefit, propose a skill
 edit. Otherwise use the smallest durable project/local destination.
 
-### 5. PROPOSE
+### 6. PROPOSE
 
 ```
 File: <path>
+Actuator: <gate | skill | command | agent | config | tool | CLAUDE.md>
 Section: <heading>
+Targets failure class: <stable id, for the ledger>
 Before: <existing line(s) or "new subsection">
 After: <proposed line(s)>
-Why: <one-sentence rationale>
+Cost traded: <tokens/calls this prevents vs standing cost of the fix>
+Why this actuator, not a cheaper-running / more-expensive one: <one sentence>
 ```
 
 One rule per paragraph, one example max. Cap proposals at the top 3-5 by
-recurrence. Put the rest in "Noted but not actioned".
+**cost-weighted** recurrence. Put the rest in "Noted but not actioned". An edit
+that cannot name the failure class it targets is not a controller action —
+demote it to a note.
+
+### 8. APPLY
+
+After CONFIRM only. Edit the canonical source, verify the loaded file changed,
+report the landed path. Then record in the ledger, one row per applied edit:
+
+```
+date (shell `date`) | file+section | actuator | targets-failure-class |
+before→after (verbatim — VERIFY's presence anchor) | [optional: config-fingerprint] |
+status: open
+```
+
+The `before→after` field is not just an audit record — VERIFY uses the stored
+`after` text as a presence anchor next retro (does this edit still literally
+appear in the file?), so record it verbatim. That is what lets VERIFY confirm an
+edit is still in force without storing a snapshot of the whole config, on any
+host. Optionally also record a whole-config fingerprint at apply time — a VCS
+revision id where files are version-controlled, otherwise a content hash — as a
+coarse "did anything else move" hint for next retro; it is advisory, not
+required, and cannot recover prior state. Write the ledger to whatever durable
+location the host provides (see Preconditions); it must persist across sessions
+and be read only at retro time — never written into a working session's context.
+Do **not** add a hook that writes observations on the fly: the transcript is
+already the complete on-the-fly record, and an in-session writer spends live
+tokens in the very session you are trying to make cheaper.
 
 ## Output Shape
 
-Printed inline. Nothing is written to disk except the tmp intermediate notes.
+Printed inline. Nothing is written to disk except tmp intermediate notes and, at
+APPLY, the ledger.
 
 ```
+## Loop check (VERIFY)
+- <prior edit>: <confirmed-effective | ineffective | untested-this-window>
+  (<edit still present? exercised this window? cost change?>)
+
+## Cost summary
+- Total token-weighted wasted effort this window, and the few failures that
+  dominate it. (Headline is cost, not count.)
+
 ## Recurring — worked
 - <item with note references>
 
 ## Recurring — didn't work
-- <item with note references>
+- <item with note references, cost-weighted>
 
-## Proposed skill edits   (top 3–5 by recurrence)
-1. File: <path>
-   Section: <heading>
+## Proposed edits   (top 3–5 by cost-weighted recurrence)
+1. File: <path>   Actuator: <…>   Targets: <failure class>
    Change: <old → new>
-   Why: <one sentence>
+   Cost traded: <prevents X vs standing cost Y>
+   Why this actuator: <one sentence>
+
+## Floor (not actionable)
+- <present-contradicted failures — info was available and ignored; no actuator fixes these>
 
 ## Proposed follow-up notes
 - <destination or type>: <entry>
 
 ## Proposed procedure candidates
-1. Name: <short verb-led title>
-   Trigger: <when to invoke>
-   Steps:
-     1. <step>
-   Destination: <new skill file path> or <existing skill + section>
-   Why a procedure, not a rule: <one sentence>
+1. Name / Trigger / Steps / Destination / Why a procedure not a rule
 
 ## Proposed skill promotions
-1. Pattern: <one-line description>
-   Recurrence evidence: <which notes / sessions>
-   Destination: <new skill file path + proposed name>
-   Why promote: <one sentence>
+1. Pattern / Recurrence evidence / Destination / Why promote
 
 ## Noted but not actioned
-- <single-session or lower-priority findings>
+- <single-session, low-cost, or floor findings>
 
 Apply these?
 ```
 
-Nothing is written except tmp intermediate notes until the user approves.
+Nothing is written (beyond tmp notes) until the user approves.
 
 ## Red Flags
 
@@ -178,6 +335,20 @@ Nothing is written except tmp intermediate notes until the user approves.
 - No anchor: proposed edit lacks file path and section.
 - Pure analysis: no proposed edit or follow-up note.
 - Premature application: edits applied before user approval.
+- **Wrong actuator: a fix placed at a more-expensive-to-run actuator than needed
+  — especially a CLAUDE.md line for something a gate could prevent.**
+- **Louder wallpaper: answering a `present-not-consulted` failure by adding
+  standing context, which feeds the blindness and taxes every session.**
+- **Count over cost: a headline ratio that weights a papercut equal to an
+  expensive misdirection.**
+- **Spending on the floor: proposing a fix for `present-contradicted` — the info
+  was available and ignored; no actuator recovers it.**
+- **Open loop: proposing new edits without VERIFYing prior ones against the ledger.**
+- **Attribution without excitation: concluding a prior edit worked because its
+  failure didn't recur, when this window never exercised that mode.**
+- **On-the-fly ledger: a hook writing observations mid-session — duplicates the
+  transcript at the cost of live session tokens.**
 - Layer mixing: project facts placed in shared skills.
-- Portability leak: local paths, private tools, or personal workflow placed in a shared skill.
-- Absence treated as evidence: no recurrence in this window does not prove a past issue is fixed.
+- Portability leak: local paths, private tools, or personal workflow in a shared skill.
+- Absence treated as evidence: no recurrence in this window does not prove a past
+  issue is fixed.
