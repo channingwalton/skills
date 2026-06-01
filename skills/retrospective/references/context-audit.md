@@ -85,7 +85,7 @@ err = dup = oversize = 0
 hook_hash = collections.Counter(); hook_size = {}
 
 for f in files:
-    id2name = {}
+    id2name = {}; id2path = {}; seen_paths = set()
     for line in open(f, errors='ignore'):
         try: o = json.loads(line)
         except: continue
@@ -104,6 +104,8 @@ for f in files:
                 cat['thinking'] += len(b.get('thinking', ''))
             elif bt == 'tool_use':
                 id2name[b.get('id')] = b.get('name')
+                if b.get('name') == 'Read':
+                    id2path[b.get('id')] = (b.get('input') or {}).get('file_path')
                 cat['tool_use_input'] += len(json.dumps(b.get('input', {})))
             elif bt == 'tool_result':
                 c = b.get('content', ''); s = c if isinstance(c, str) else json.dumps(c)
@@ -111,6 +113,10 @@ for f in files:
                 name = id2name.get(b.get('tool_use_id'), '?'); tool_out[name] += len(s)
                 if b.get('is_error'): err += len(s)
                 if len(s) > 40000: oversize += len(s)
+                p = id2path.get(b.get('tool_use_id'))
+                if p is not None:
+                    if p in seen_paths: dup += len(s)   # same path Read again this session
+                    else: seen_paths.add(p)
 
 tok = lambda c: c // 4
 tot = sum(cat.values())
@@ -121,14 +127,18 @@ print("\noutput by tool (top):")
 for k, v in tool_out.most_common(12):
     print(f"  {k:24}{tok(v):>9,}")
 dupe_boiler = sum(hook_size[h]*(n-1) for h, n in hook_hash.items() if n > 1)
-print(f"\nerrors~tok={tok(err):,}  oversize>40k~tok={tok(oversize):,}  repeated-boilerplate~tok={tok(dupe_boiler):,}")
+print(f"\nerrors~tok={tok(err):,}  dup-reads~tok={tok(dup):,}  oversize>40k~tok={tok(oversize):,}  repeated-boilerplate~tok={tok(dupe_boiler):,}")
 print("\nmost-repeated injected blocks:")
 for h, n in hook_hash.most_common(6):
     if n > 1: print(f"  x{n:<4}{hook_size[h]:>7,}c each")
 ```
 
-For duplicate-read and per-path detail, also map `tool_use.id` → `input.file_path`
-and count repeats per path within a session (omitted above for brevity).
+The `dup-reads` figure counts the result chars of any `Read` of a path already
+read earlier in the same session — re-reading a file the model already had. It
+attributes by `tool_use.id` → `input.file_path`. Limits worth knowing: it only
+covers the `Read` tool (not `cat` via `Bash`, which can't be path-attributed
+reliably), and a re-read after a genuine edit is not necessarily waste — treat a
+high figure as a pointer to investigate, not a verdict.
 
 ## Cost per failure (manual — not scripted)
 

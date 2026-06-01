@@ -1,6 +1,13 @@
 ---
 name: retrospective
-description: Use on a fortnightly or post-milestone cadence, or when the user says "retrospective" / "retro" / "what's been recurring" / "what did we learn" / "review the last few sessions". Reads multiple session transcripts, distils each, measures token-weighted wasted effort, and proposes targeted config edits — placed at the cheapest-to-run actuator that prevents the failure — then verifies that prior retros' edits actually reduced the cost they targeted. Not for single-session end-of-task review.
+description: >-
+  Use on a fortnightly or post-milestone cadence, or when the user says
+  "retrospective" / "retro" / "what's been recurring" / "what did we learn" /
+  "review the last few sessions". Reads multiple session transcripts, distils
+  each, measures token-weighted wasted effort, and proposes targeted config
+  edits — placed at the lowest standing-cost actuator that prevents the failure
+  — then verifies that prior retros' edits actually reduced the cost they
+  targeted. Not for single-session end-of-task review.
 ---
 
 # Retrospective
@@ -11,7 +18,8 @@ misdirections, revisions, and incorrect tool use that a correctly-applied
 actuator would have avoided.
 
 This is a closed control loop. Sessions are the only sensor. The actuators (the
-things you can change) are, ordered by how expensive they are to keep running:
+things you can change) are, ordered by **standing cost** — how much they cost to
+keep in place over many sessions, whether or not they ever fire:
 
 | Actuator | When it costs tokens | Prefer for |
 |----------|---------------------|------------|
@@ -26,7 +34,7 @@ distribution (you observe the failures your actual work surfaces, not a uniform
 sample).
 
 Every useful finding must produce an exact proposed edit or follow-up note,
-placed at the **latest-costing actuator that can prevent it**. Single-session
+placed at the **lowest standing-cost actuator that can prevent it**. Single-session
 findings are noted but only escalated if high-severity.
 
 ## When to Use
@@ -66,7 +74,7 @@ status reports. The unit of analysis is *several sessions*, not one.
               EXERCISED in this window, and if so did its cost FALL? Close the
               loop before proposing anything new.
 4. AUDIT    — Recurring worked / recurring didn't, with note references.
-5. SORT     — Place each fix at the cheapest-to-run actuator that prevents it;
+5. SORT     — Place each fix at the lowest standing-cost actuator that prevents it;
               cap by recurrence, weight by cost.
 6. PROPOSE  — Exact edits (before/after).
 7. CONFIRM  — Ask "apply these?" — do nothing without a yes.
@@ -199,7 +207,7 @@ investigation-only on the other).
 
 ### 5. SORT
 
-Place each fix at the **latest-costing actuator that prevents it** (gate <
+Place each fix at the **lowest standing-cost actuator that prevents it** (gate <
 skill/command < structural < CLAUDE.md). The instinct to add a CLAUDE.md rule is
 reaching for the most expensive actuator first — resist it.
 
@@ -250,7 +258,7 @@ Targets failure class: <stable id, for the ledger>
 Before: <existing line(s) or "new subsection">
 After: <proposed line(s)>
 Cost traded: <tokens/calls this prevents vs standing cost of the fix>
-Why this actuator, not a cheaper-running / more-expensive one: <one sentence>
+Why this actuator, not a lower- or higher-standing-cost one: <one sentence>
 ```
 
 One rule per paragraph, one example max. Cap proposals at the top 3-5 by
@@ -335,7 +343,7 @@ Nothing is written (beyond tmp notes) until the user approves.
 - No anchor: proposed edit lacks file path and section.
 - Pure analysis: no proposed edit or follow-up note.
 - Premature application: edits applied before user approval.
-- **Wrong actuator: a fix placed at a more-expensive-to-run actuator than needed
+- **Wrong actuator: a fix placed at a higher-standing-cost actuator than needed
   — especially a CLAUDE.md line for something a gate could prevent.**
 - **Louder wallpaper: answering a `present-not-consulted` failure by adding
   standing context, which feeds the blindness and taxes every session.**
