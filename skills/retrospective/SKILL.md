@@ -55,11 +55,15 @@ status reports. The unit of analysis is *several sessions*, not one.
 2. The review window must be defined: last fortnight, last N sessions, since
    last retro, or a supplied file list. If unspecified, ask.
 3. The VERIFY ledger must be locatable. It is a small file the retro writes to
-   itself and reads at the next retro; it can live anywhere the host keeps
-   durable state across sessions (a notes store, a repo, a config dir — the
-   skill does not prescribe). If its location is not known, ask. If none exists,
-   this is the first run — VERIFY is skipped and the ledger is created at APPLY
-   in a location the user confirms.
+   itself and reads at the next retro. Locate it in order:
+   a. `$RETROSPECTIVE_LEDGER` — if set, that is the ledger path; use it.
+   b. otherwise ask the user, and suggest they export `RETROSPECTIVE_LEDGER` so
+      future retros find it without asking.
+   The file can live anywhere the host keeps durable state across sessions (a
+   notes store, a repo, a config dir); the skill does not prescribe *where* it
+   lives, only how to find it. If the path resolves but the file does not exist
+   yet, this is the first run — VERIFY is skipped and the ledger is created
+   there at APPLY.
 
 ## The Process
 
@@ -176,13 +180,13 @@ For each edit still marked open:
      itself the finding: the edit did not stick. Do not re-apply blindly; note
      it and treat as `untested-this-window` for cost purposes (you cannot
      attribute a cost change to an edit that wasn't in force).
-   Optionally, if the host makes a cheap whole-config fingerprint available (a
-   VCS revision id, or a content hash recorded at the last APPLY), a change in it
-   flags that *something* in θ moved between retros — useful as a coarse "expect
-   reduced attributability this window" hint. This is detection, not
-   attribution: it tells you something changed, not what, and it cannot recover
-   prior state. Treat it as advisory; the per-edit presence check above is the
-   load-bearing one.
+     Optionally, if the host makes a cheap whole-config fingerprint available (a
+     VCS revision id, or a content hash recorded at the last APPLY), a change in it
+     flags that *something* in θ moved between retros — useful as a coarse "expect
+     reduced attributability this window" hint. This is detection, not
+     attribution: it tells you something changed, not what, and it cannot recover
+     prior state. Treat it as advisory; the per-edit presence check above is the
+     load-bearing one.
 3. **If exercised and attributable:** did the targeted failure's cost fall?
    - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
    - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
@@ -284,9 +288,10 @@ edit is still in force without storing a snapshot of the whole config, on any
 host. Optionally also record a whole-config fingerprint at apply time — a VCS
 revision id where files are version-controlled, otherwise a content hash — as a
 coarse "did anything else move" hint for next retro; it is advisory, not
-required, and cannot recover prior state. Write the ledger to whatever durable
-location the host provides (see Preconditions); it must persist across sessions
-and be read only at retro time — never written into a working session's context.
+required, and cannot recover prior state. Write the ledger to the path resolved
+in Preconditions (`$RETROSPECTIVE_LEDGER`, or the path the user confirmed); it
+must persist across sessions and be read only at retro time — never written into
+a working session's context.
 Do **not** add a hook that writes observations on the fly: the transcript is
 already the complete on-the-fly record, and an in-session writer spends live
 tokens in the very session you are trying to make cheaper.
@@ -359,4 +364,4 @@ Nothing is written (beyond tmp notes) until the user approves.
 - Layer mixing: project facts placed in shared skills.
 - Portability leak: local paths, private tools, or personal workflow in a shared skill.
 - Absence treated as evidence: no recurrence in this window does not prove a past
-  issue is fixed.
+  issue is fixed. 

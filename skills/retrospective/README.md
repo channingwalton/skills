@@ -55,6 +55,15 @@ cp -R skills/retrospective ~/.codex/skills/
 
 Substitute your agent's skill directory if not Codex.
 
+Then point the retro at a durable ledger file so it can verify its own edits
+across runs (see [Persistence](#persistence)):
+
+```sh
+export RETROSPECTIVE_LEDGER=~/path/to/retro-ledger.md   # add to your shell profile
+```
+
+If unset, the retro asks for the location on first run.
+
 ## Persistence
 
 The retro prints inline. It writes only two things to disk:
@@ -67,13 +76,14 @@ The retro prints inline. It writes only two things to disk:
    verbatim (used next time to check the edit is still in force), and
    optionally a config fingerprint. It must persist across sessions and live
    somewhere read only at retro time — never injected into a working session's
-   context. The skill does not prescribe a location or storage format; it asks
-   where to keep it on first run, and works the same whether or not the files it
-   edits are version-controlled (it uses the stored `after` text, not a VCS, to
-   verify an edit survived).
+   context. The skill does not prescribe a location or storage format. It finds
+   the ledger from **`$RETROSPECTIVE_LEDGER`** (a file path); if that is unset it
+   asks where to keep it on first run. Either way it works the same whether or
+   not the files it edits are version-controlled (it uses the stored `after`
+   text, not a VCS, to verify an edit survived).
 
 On the **first run** (no ledger yet) VERIFY is skipped and the ledger is created
-at APPLY in a location you confirm.
+at APPLY — at `$RETROSPECTIVE_LEDGER` if set, otherwise a location you confirm.
 
 There is deliberately **no on-the-fly hook** writing observations during
 sessions: the transcript is already the complete on-the-fly record, and an
