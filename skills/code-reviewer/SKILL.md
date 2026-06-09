@@ -16,7 +16,12 @@ Review one of: file paths, a git diff or PR reference, or a directory.
 1. SCOPE - identify the exact review surface.
 2. READ - inspect target files, changed lines, and relevant surrounding code.
 3. CONTEXT - check callers, contracts, schema/API boundaries, and local patterns.
-4. ANALYSE - look for behaviour-changing risks.
+   If the change alters strings, messages, error text, or signatures, search the
+   whole repo for other usages and test assertions of the old values — diff-only
+   review misses assertions that will fail elsewhere.
+4. ANALYSE - look for behaviour-changing risks. For changes that add data to any
+   output (errors, logs, emails, API responses), state who can observe it —
+   surfacing existing data to a new audience is an exposure, not a refactor.
 5. VERIFY - every Critical finding needs a concrete reproduction: failing test, REPL snippet, or step-by-step trace with specific input values. If you cannot prove it, downgrade or drop it.
 6. DISCOVER - report missing tests for uncovered behaviours and edge cases.
 7. DUPLICATES - run the project's configured duplicate-code check when one exists, scoped to the review target where possible. Report missing tooling separately from code findings.
