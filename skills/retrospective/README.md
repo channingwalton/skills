@@ -1,10 +1,12 @@
 # retrospective
 
-A cross-session improvement loop for harness configuration. Distils several
-session transcripts into structured notes, measures **token-weighted wasted
-effort**, proposes config edits placed at the **cheapest-to-run actuator** that
-prevents each failure, and **verifies** that prior retros' edits actually reduced
-the cost they targeted before proposing more.
+A cross-session improvement loop for harness configuration: reduce **mistakes,
+wasted tokens, and restarts** in future sessions by improving the skills and
+config they run under. Distils several session transcripts into structured
+notes, measures **token-weighted wasted effort**, proposes config edits placed
+at the **cheapest-to-run actuator** that prevents each failure, and **verifies**
+that prior retros' edits actually reduced the cost they targeted before
+proposing more.
 
 It is a closed control loop: sessions are the only sensor; the actuators are the
 things you can change (gates/hooks, skills, commands, agents, config, tool
@@ -29,14 +31,22 @@ analysis is several sessions, not one.
 ## What it does differently from a plain retro
 
 - **Cost-weighted, not count-based.** One expensive misdirection outweighs a
-  tail of papercuts; the headline is wasted effort, not a failure count.
+  tail of papercuts; the headline is wasted effort, not a failure count. Two
+  exceptions keep standing regardless of token cost: wrong-outcome mistakes and
+  abandoned-and-restarted sessions.
+- **Restart-aware.** A session you abandoned and re-prompted fresh is the most
+  expensive failure shape, and per-session analysis can't see it; an aggregate
+  pass looks for re-attempted tasks across transcripts.
 - **Actuator placement.** Each fix goes to the lowest-costing actuator that
   prevents it (a gate that costs nothing until it fires beats a CLAUDE.md line
   that taxes every session). It resists answering failures with more standing
   context.
 - **Closed loop.** It keeps a small ledger of the edits it applies and checks,
   next time, whether each edit stuck and whether the failure it targeted got
-  cheaper — so corrections are verified, not assumed.
+  cheaper — so corrections are verified, not assumed. The ledger also gets one
+  summary row per retro (window headline plus cumulative edit hit-rate), so the
+  retro audits *itself*: a high ineffective or never-exercised rate, or waste
+  that stays flat despite confirmed edits, is a finding about the retro.
 
 ## Install
 
@@ -74,7 +84,10 @@ The retro prints inline. It writes only two things to disk:
    APPLY and reads at the next retro. One row per applied edit: what changed,
    which actuator, the failure class it targets, the edit's `after` text
    verbatim (used next time to check the edit is still in force), and
-   optionally a config fingerprint. It must persist across sessions and live
+   optionally a config fingerprint. Plus one summary row per retro run —
+   window headline (wasted tokens, restarts, wrong-outcome mistakes) and edit
+   hit-rate to date — which the next retro reads as a trend check on the retro
+   itself. It must persist across sessions and live
    somewhere read only at retro time — never injected into a working session's
    context. The skill does not prescribe a location or storage format. It finds
    the ledger from **`$RETROSPECTIVE_LEDGER`** (a file path); if that is unset it
