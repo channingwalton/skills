@@ -1,7 +1,7 @@
 # Context audit (MEASURE step)
 
-The MEASURE step has two outputs. This file covers both, but only the first is
-scriptable:
+The MEASURE step has three outputs. This file covers all three; the first is
+scriptable, the third partly so:
 
 1. **Context waste** (scriptable) — quantify where a window's context tokens
    went, and trace the biggest noise to the skill / command / habit that
@@ -11,6 +11,9 @@ scriptable:
    failure cost, so the retro's headline is cost-weighted not count-based. This
    is a judgement tally over the DISTIL notes, not a script output — see "Cost
    per failure" below for why.
+3. **Restarts** (script surfaces candidates, judgement confirms) — find
+   abandoned-and-re-attempted sessions across the window. See "Restart
+   detection" below.
 
 Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 
@@ -25,6 +28,15 @@ blocks: `text`, `thinking`, `tool_use` (has `name`, `input`, `id`),
 
 Adjust the glob / window for the agent and host. If transcripts aren't JSONL,
 skip MEASURE.
+
+Format drift: hosts change what they store, so sanity-check two things before
+trusting the composition output. If `thinking` reads 0, the host likely strips
+thinking from stored transcripts — host behaviour, not zero thinking. And some
+hosts inject harness context inside *user* messages rather than as attachments
+(e.g. one host wraps it in `<system-reminder>` tags — the marker the script's
+`REMINDER` pattern matches by default); adjust the pattern to your host's
+marker, or `user_text` absorbs the injections and injection bloat is badly
+undercounted.
 
 ## What to compute
 
@@ -55,8 +67,8 @@ A token number is only actionable once tied to what emits it:
 
 - Recurring large `git diff` / verbose command output on a known trigger
   (e.g. every commit) → a slash-command / skill `!`-injection. Cap or scope it.
-  *(This audit's origin: `push` skill injected `git diff HEAD` uncapped every
-  invocation; fix was stat + capped diff.)*
+  *(This audit's origin: a commit-and-push command injected `git diff HEAD`
+  uncapped on every invocation; fix was stat + capped diff.)*
 - Oversized dumps in subagents → the dispatch prompt told them to read whole
   files; pass a `jq` slice or summary instead.
 - Per-session boilerplate → installed-but-unused plugins / MCP servers, or a
@@ -70,9 +82,10 @@ context" row is the common landing spot.
 Plain `python3`, stdlib only. Edit the glob and window.
 
 ```python
-import json, os, glob, time, collections, hashlib
+import json, os, glob, time, collections, hashlib, re
 
 DAYS = 7
+REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)  # adjust marker per host
 files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
          if time.time() - os.path.getmtime(f) < DAYS*86400]
 
@@ -99,7 +112,13 @@ for f in files:
         for b in blocks(o.get('message', {}).get('content', [])):
             bt = b.get('type'); role = o.get('message', {}).get('role', t)
             if bt == 'text':
-                cat['assistant_text' if role == 'assistant' else 'user_text'] += len(b.get('text', ''))
+                txt = b.get('text', '')
+                if role == 'assistant':
+                    cat['assistant_text'] += len(txt)
+                else:
+                    rem = sum(len(m) for m in REMINDER.findall(txt))
+                    cat['injected_reminder'] += rem
+                    cat['user_text'] += len(txt) - rem
             elif bt == 'thinking':
                 cat['thinking'] += len(b.get('thinking', ''))
             elif bt == 'tool_use':
@@ -140,13 +159,58 @@ covers the `Read` tool (not `cat` via `Bash`, which can't be path-attributed
 reliably), and a re-read after a genuine edit is not necessarily waste — treat a
 high figure as a pointer to investigate, not a verdict.
 
+## Restart detection
+
+A session the user abandoned and re-prompted fresh is the most expensive
+failure shape — the whole abandoned transcript is the cost — and per-transcript
+DISTIL cannot see it: an abandoned session just looks like one that ended. This
+is a cross-transcript pass.
+
+The script lists each session's opening prompt and final event, in time order.
+Adjacent sessions with near-duplicate openings, or an opening that re-states
+the previous session's unfinished task, are restart candidates:
+
+```python
+import json, os, glob, time
+
+DAYS = 7
+files = sorted((f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
+                if time.time() - os.path.getmtime(f) < DAYS*86400), key=os.path.getmtime)
+
+def texts(o):
+    c = o.get('message', {}).get('content', [])
+    c = c if isinstance(c, list) else [{'type': 'text', 'text': c}]
+    return [b.get('text', '') for b in c if b.get('type') == 'text' and b.get('text', '').strip()]
+
+for f in files:
+    first = last = ''
+    for line in open(f, errors='ignore'):
+        try: o = json.loads(line)
+        except: continue
+        if o.get('type') not in ('user', 'assistant'): continue
+        for t in texts(o):
+            t = ' '.join(t.split())[:110]
+            if not first and o['type'] == 'user' and not t.startswith('<'): first = t
+            last = f"[{o['type']}] {t}"
+    print(f"{time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(f)))}  {os.path.basename(os.path.dirname(f))[:36]}")
+    print(f"   first: {first}\n   last:  {last}")
+```
+
+Confirming a candidate is judgement, not script: read the abandoned session's
+tail. A last event that is an error, an unanswered question, or mid-task tool
+output (rather than a wrap-up) confirms abandonment. The failure to fix is
+whatever caused the abandonment — find it in the tail, cost it at the full
+abandoned transcript, and route it through SORT like any other finding. A
+session that ends cleanly and is followed by related new work is continuation,
+not a restart — don't count it.
+
 ## Cost per failure (manual — not scripted)
 
 The script above attributes *context* tokens to *tools*. It cannot attribute
 *wasted* tokens to *failures*, and you should not extend it to try. Deciding
 which calls belong to a given failure — from its first wrong turn to its
 resolution — is the same judgement as isolating the failure in the first place
-(DISTIL Step 0), and it does not separate mechanically from interleaved work: a
+(DISTIL), and it does not separate mechanically from interleaved work: a
 session rarely does one thing at a time, so "calls spent on this failure" is a
 read, not a count. A script that claims it will produce confident nonsense.
 
@@ -159,7 +223,9 @@ down a false hypothesis) from a cosmetic self-correction (one call, immediately
 fixed) — that ranking is the point, not the precise figure.
 
 This is what makes the retro headline cost-weighted: one expensive failure can
-outweigh a tail of papercuts, and a count-based ratio would hide that.
+outweigh a tail of papercuts, and a count-based ratio would hide that. One
+exception: wrong-outcome mistakes keep finding status regardless of cost —
+cost ranks them, it does not gate them.
 
 ## Output
 

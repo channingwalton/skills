@@ -4,18 +4,21 @@ description: >-
   Use on a fortnightly or post-milestone cadence, or when the user says
   "retrospective" / "retro" / "what's been recurring" / "what did we learn" /
   "review the last few sessions". Reads multiple session transcripts, distils
-  each, measures token-weighted wasted effort, and proposes targeted config
-  edits — placed at the lowest standing-cost actuator that prevents the failure
+  each, measures token-weighted wasted effort (including abandoned-and-restarted
+  sessions), and proposes targeted config edits — placed at the lowest standing-cost actuator that prevents the failure
   — then verifies that prior retros' edits actually reduced the cost they
   targeted. Not for single-session end-of-task review.
 ---
 
 # Retrospective
 
-Run across several sessions, not one. The job is to reduce **token-weighted
-wasted effort** in future sessions: calls and tokens spent on wrong paths,
-misdirections, revisions, and incorrect tool use that a correctly-applied
-actuator would have avoided.
+Run across several sessions, not one. The job is to reduce **mistakes, wasted
+tokens, and restarts** in future sessions by improving the skills and config
+they run under. The headline metric is **token-weighted wasted effort** — calls
+and tokens spent on wrong paths, misdirections, revisions, and incorrect tool
+use that a correctly-applied actuator would have avoided — with two findings
+that keep standing regardless of token cost: wrong-outcome mistakes (a wrong
+answer accepted, a premature "done") and abandoned-and-restarted sessions.
 
 This is a closed control loop. Sessions are the only sensor. The actuators (the
 things you can change) are, ordered by **standing cost** — how much they cost to
@@ -72,8 +75,9 @@ status reports. The unit of analysis is *several sessions*, not one.
               genuine failures (not normal iteration), write a structured note.
               One transcript at a time; do not load them all together.
 2. MEASURE  — One aggregate pass: where did tokens go (per-tool output, hook/
-              injection bloat, unused dumps) AND what did each failure COST in
-              wasted calls/tokens. See `references/context-audit.md`.
+              injection bloat, unused dumps), what did each failure COST in
+              wasted calls/tokens, AND which sessions were abandoned and
+              restarted. See `references/context-audit.md`.
 3. VERIFY   — Read the ledger. For each open prior edit: was its failure mode
               EXERCISED in this window, and if so did its cost FALL? Close the
               loop before proposing anything new.
@@ -132,6 +136,10 @@ For each isolated failure, capture:
 - **cost**: wasted calls and/or wasted wall-clock attributable to the failure.
   This is the weight that matters — a cosmetic self-correction and a ten-call
   misdirection are not equal units.
+- **outcome severity, independent of cost**: did the mistake produce a wrong
+  outcome — a wrong answer accepted, a premature "done", a bad edit left in
+  place? A token-cheap mistake with a wrong outcome is a high-severity finding;
+  cost ranks findings, it does not gate them.
 - the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
   see the architectural issue", "the test didn't actually run"). These are the
   highest-value signal and they are already in the transcript — harvest them, do
@@ -147,7 +155,7 @@ Save as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md`; get the timestamp from shell
 ### 2. MEASURE
 
 One aggregate pass over the raw transcript JSONL for the window — not per
-session. Two outputs:
+session. Three outputs:
 
 1. **Context waste**: tool-result output by tool, hook/injection bloat, content
    never used (errors, duplicate re-reads, oversized dumps, boilerplate). Trace
@@ -157,7 +165,15 @@ session. Two outputs:
    isolated failure. The retro's headline is **cost-weighted, not count-based.**
    A clean-looking percentage on a small sample of mostly-papercut failures is
    the result to distrust — one expensive ungated failure can outweigh the
-   entire tail.
+   entire tail. One exception: wrong-outcome mistakes (flagged in DISTIL) keep
+   finding status regardless of token cost.
+3. **Restarts** (cross-transcript): scan the window for abandoned-and-re-attempted
+   work — near-duplicate opening prompts, the same task resumed in a fresh
+   session, sessions ending mid-task with no wrap-up. Per-transcript DISTIL
+   cannot see these: an abandoned session just looks like one that ended. A
+   restart's cost is the **entire abandoned transcript**, which usually puts it
+   at the top of the cost ranking; read the abandoned session's tail to find
+   what caused the abandonment, and treat that as the failure to fix.
 
 `references/context-audit.md` holds the script and the noise heuristics. Skip
 this step only when transcripts aren't available as raw JSONL.
@@ -182,7 +198,7 @@ For each edit still marked open:
      attribute a cost change to an edit that wasn't in force).
      Optionally, if the host makes a cheap whole-config fingerprint available (a
      VCS revision id, or a content hash recorded at the last APPLY), a change in it
-     flags that *something* in θ moved between retros — useful as a coarse "expect
+     flags that *something* in the governed config moved between retros — useful as a coarse "expect
      reduced attributability this window" hint. This is detection, not
      attribution: it tells you something changed, not what, and it cannot recover
      prior state. Treat it as advisory; the per-edit presence check above is the
@@ -191,6 +207,16 @@ For each edit still marked open:
    - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
    - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
      second patch on top.** Stacking is integrator windup.
+4. **Trend check (skill-level).** Read prior retros' SUMMARY rows (see APPLY).
+   Compare this window's headline — wasted tokens, restarts, wrong-outcome
+   mistakes, roughly normalised per session — against the trajectory, and read
+   the cumulative edit hit-rate (confirmed-effective vs ineffective vs
+   still-untested). Flat-or-rising waste across several retros despite
+   confirmed-effective edits means the retro is fixing the wrong things; a high
+   ineffective or perpetually-untested rate means diagnoses are poor or edits
+   target modes too rare to matter. Either is a finding about the retro
+   itself — report it in the Loop check. Directional only: task mix and model
+   changes confound, and one window is never a trend.
 
 Skip VERIFY only on the first-ever run (no ledger yet).
 
@@ -199,8 +225,10 @@ Skip VERIFY only on the first-ever run (no ledger yet).
 Read the notes back. Build **recurring worked** and **recurring didn't** lists,
 with note references per item. Do not escalate single-session findings unless
 high-severity. Fold MEASURE in: a token-heavy injection or dump is recurring if
-it spans multiple sessions. Fold VERIFY in: an `ineffective` prior edit is a
-recurring finding that needs a *different* actuator, not a louder same one.
+it spans multiple sessions, and a restart is automatically high-severity —
+whatever caused the abandonment gets recurring-level standing even from one
+instance. Fold VERIFY in: an `ineffective` prior edit is a recurring finding
+that needs a *different* actuator, not a louder same one.
 
 Note on generality: failures that are **harness/tooling-shaped** (tool loading,
 gating, polling, path handling) are general by construction — they do not depend
@@ -270,6 +298,11 @@ One rule per paragraph, one example max. Cap proposals at the top 3-5 by
 that cannot name the failure class it targets is not a controller action —
 demote it to a note.
 
+### 7. CONFIRM
+
+Present the report (Output Shape below) and ask "apply these and record the
+retro summary?". Do nothing without a yes.
+
 ### 8. APPLY
 
 After CONFIRM only. Edit the canonical source, verify the loaded file changed,
@@ -281,15 +314,21 @@ before→after (verbatim — VERIFY's presence anchor) | [optional: config-finge
 status: open
 ```
 
-The `before→after` field is not just an audit record — VERIFY uses the stored
-`after` text as a presence anchor next retro (does this edit still literally
-appear in the file?), so record it verbatim. That is what lets VERIFY confirm an
-edit is still in force without storing a snapshot of the whole config, on any
-host. Optionally also record a whole-config fingerprint at apply time — a VCS
-revision id where files are version-controlled, otherwise a content hash — as a
-coarse "did anything else move" hint for next retro; it is advisory, not
-required, and cannot recover prior state. Write the ledger to the path resolved
-in Preconditions (`$RETROSPECTIVE_LEDGER`, or the path the user confirmed); it
+Record the `after` text verbatim — VERIFY uses it as the presence anchor next
+retro (step 2 above). The optional config fingerprint is the advisory
+whole-config hint described there.
+
+Then append **one SUMMARY row for the retro itself** — written every run after
+CONFIRM, even when zero edits were approved, because VERIFY's trend check needs
+the headline regardless:
+
+```
+SUMMARY | date (shell `date`) | window: <N sessions / range> |
+wasted~tok: <total> | restarts: <n> | wrong-outcome: <n> |
+edits to date: <confirmed-effective>/<ineffective>/<untested>
+```
+
+Write the ledger to the path resolved in Preconditions (`$RETROSPECTIVE_LEDGER`, or the path the user confirmed); it
 must persist across sessions and be read only at retro time — never written into
 a working session's context.
 Do **not** add a hook that writes observations on the fly: the transcript is
@@ -305,10 +344,15 @@ APPLY, the ledger.
 ## Loop check (VERIFY)
 - <prior edit>: <confirmed-effective | ineffective | untested-this-window>
   (<edit still present? exercised this window? cost change?>)
+- Trend: <this window's headline vs prior SUMMARY rows; cumulative edit
+  hit-rate> (directional only)
 
 ## Cost summary
 - Total token-weighted wasted effort this window, and the few failures that
   dominate it. (Headline is cost, not count.)
+- Restarts: abandoned-and-re-attempted sessions, each costed at its abandoned
+  transcript, with the cause of abandonment.
+- Wrong-outcome mistakes, listed regardless of token cost.
 
 ## Recurring — worked
 - <item with note references>
@@ -344,24 +388,19 @@ Nothing is written (beyond tmp notes) until the user approves.
 
 ## Red Flags
 
-- Generic advice: "test more", "plan better"; name a file and section or drop it.
-- No anchor: proposed edit lacks file path and section.
+- Generic advice ("test more", "plan better") — name a file and section or drop it.
+- No anchor: proposed edit lacks a file path and section.
 - Pure analysis: no proposed edit or follow-up note.
 - Premature application: edits applied before user approval.
-- **Wrong actuator: a fix placed at a higher-standing-cost actuator than needed
-  — especially a CLAUDE.md line for something a gate could prevent.**
-- **Louder wallpaper: answering a `present-not-consulted` failure by adding
-  standing context, which feeds the blindness and taxes every session.**
-- **Count over cost: a headline ratio that weights a papercut equal to an
-  expensive misdirection.**
-- **Spending on the floor: proposing a fix for `present-contradicted` — the info
-  was available and ignored; no actuator recovers it.**
-- **Open loop: proposing new edits without VERIFYing prior ones against the ledger.**
-- **Attribution without excitation: concluding a prior edit worked because its
-  failure didn't recur, when this window never exercised that mode.**
-- **On-the-fly ledger: a hook writing observations mid-session — duplicates the
-  transcript at the cost of live session tokens.**
-- Layer mixing: project facts placed in shared skills.
-- Portability leak: local paths, private tools, or personal workflow in a shared skill.
-- Absence treated as evidence: no recurrence in this window does not prove a past
-  issue is fixed. 
+- Wrong actuator: fix placed higher in standing cost than needed (a CLAUDE.md line where a gate would do).
+- Louder wallpaper: answering `present-not-consulted` with more standing context.
+- Count over cost: a headline that weights a papercut equal to an expensive misdirection.
+- Cost over outcome: dismissing a wrong-outcome mistake because it was token-cheap.
+- Restart blindness: treating an abandoned-and-restarted session as a clean ending.
+- Spending on the floor: proposing a fix for `present-contradicted`.
+- Open loop: proposing new edits without VERIFYing prior ones against the ledger.
+- Attribution without excitation: crediting a prior edit when its failure mode was never exercised.
+- On-the-fly ledger: a hook writing observations mid-session.
+- Layer mixing / portability leak: project facts, local paths, private tools, or personal workflow in a shared skill.
+- One-window trend: reading a single retro's headline as a trajectory.
+- Absence treated as evidence: no recurrence in this window does not prove a past issue is fixed.
