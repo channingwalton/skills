@@ -22,6 +22,12 @@ Review one of: file paths, a git diff or PR reference, or a directory.
 4. ANALYSE - look for behaviour-changing risks. For changes that add data to any
    output (errors, logs, emails, API responses), state who can observe it —
    surfacing existing data to a new audience is an exposure, not a refactor.
+   Trace correctness paths, not just the diff text: (a) a new error/`throw`/
+   `error()`/exception site inside a `Result`/`Either`/`flatMap`/rescue chain —
+   is it caught, or does it escape to a 500/unhandled response? (b) a
+   user-supplied value used to build a file path or storage key — check path
+   traversal; (c) a new field added to a write/persist path — check every
+   skip/dedup/`identical?`/early-return guard on that path accounts for it.
 5. VERIFY - every Critical finding needs a concrete reproduction: failing test, REPL snippet, or step-by-step trace with specific input values. If you cannot prove it, downgrade or drop it.
 6. DISCOVER - report missing tests for uncovered behaviours and edge cases.
 7. DUPLICATES - run the project's configured duplicate-code check when one exists, scoped to the review target where possible. Report missing tooling separately from code findings.
