@@ -9,8 +9,9 @@ that prior retros' edits actually reduced the cost they targeted before
 proposing more.
 
 It is a closed control loop: sessions are the only sensor; the actuators are the
-things you can change (gates/hooks, skills, commands, agents, config, tool
-surface, standing context like CLAUDE.md / AGENTS.md). Two things are explicitly
+things a proposed fix *could* change (gates and hooks, skills, commands, agents,
+config, tool surface, standing context like CLAUDE.md / AGENTS.md) — a menu of
+where a fix can land, not a list of what this skill ships. Two things are explicitly
 not actuators and never the proposed fix: the model itself, and the task
 distribution.
 
