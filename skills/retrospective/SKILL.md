@@ -8,6 +8,7 @@ description: >-
   sessions), and proposes targeted config edits — placed at the lowest standing-cost actuator that prevents the failure
   — then verifies that prior retros' edits actually reduced the cost they
   targeted. Not for single-session end-of-task review.
+disable-model-invocation: true
 ---
 
 # Retrospective

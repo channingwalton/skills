@@ -1,6 +1,7 @@
 ---
 name: chatter
 description: Use when the user asks you to start, join, or continue a conversation with other agents via chatter, agent-chat, or talking to other agents about X.
+disable-model-invocation: true
 ---
 
 # chatter
