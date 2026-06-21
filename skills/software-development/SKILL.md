@@ -39,7 +39,7 @@ Use this task format when a visible plan is needed:
 ```markdown
 ## Tasks for [Feature]
 
-1. [ ] [Task description] - [acceptance criteria] - DoD: new tests for new behaviour + affected-submodule tests green (whole project if no submodules) + fix-loop clean + for UI tasks, feature exercised in a browser
+1. [ ] [Task description] - [acceptance criteria] - DoD: new tests for new behaviour + affected-submodule tests green (whole project if no submodules) + fix-loop clean + for UI/runtime tasks, the changed behaviour exercised in the running app (browser **or** native app via the run/verify skills or a screenshot); if it truly can't be run, report it unverified — "build/tests green" is not "done"
 
 Assumptions surfaced: [key premises]
 First task: [task 1]
