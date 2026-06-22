@@ -147,6 +147,12 @@ For each isolated failure, capture:
   not build a hook to capture them.
 - context waste: large tool outputs that went unused; note the producing tool,
   command, or skill `!`-injection
+- redundancy signals: skill text, rules, installed surfaces, or injected
+  guidance that appear to add no behavioural delta. Record the evidence type:
+  `duplicated-by-default`, `covered-by-other-skill`, `loaded-unused`,
+  `exercised-no-delta`, or `low-value-token-tax`. Treat these as inferences, not
+  proof; absence of visible use is weak evidence unless the relevant trigger was
+  exercised.
 - explicit "remember X for retro" markers, verbatim
 - candidate findings
 
@@ -156,7 +162,7 @@ Save as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md`; get the timestamp from shell
 ### 2. MEASURE
 
 One aggregate pass over the raw transcript JSONL for the window — not per
-session. Three outputs:
+session. Four outputs:
 
 1. **Context waste**: tool-result output by tool, hook/injection bloat, content
    never used (errors, duplicate re-reads, oversized dumps, boilerplate). Trace
@@ -175,6 +181,12 @@ session. Three outputs:
    restart's cost is the **entire abandoned transcript**, which usually puts it
    at the top of the cost ranking; read the abandoned session's tail to find
    what caused the abandonment, and treat that as the failure to fix.
+4. **Redundancy inference**: combine context waste with the DISTIL notes. Flag
+   skill sections or installed surfaces that repeatedly cost tokens without an
+   observed behavioural delta, overlap another active skill, or duplicate
+   default model/harness behaviour. Do not delete or trim purely because a rule
+   was not used in this window; require either relevant excitation or clear
+   overlap evidence.
 
 `references/context-audit.md` holds the script and the noise heuristics. Skip
 this step only when transcripts aren't available as raw JSONL.
@@ -265,6 +277,7 @@ Use this table for destination:
 | Needs context at a specific moment | Skill/command edit (on-demand) |
 | Topology / delegation / tool availability | Agent, config, or tool-surface edit |
 | Skill/command injects unused context | Skill/command edit: cap or scope the injection |
+| Skill/rule appears redundant after excitation or overlap check | Skill/command edit: trim, merge, demote to reference, or drop |
 | Discipline slipped (knew rule, skipped it) | Prefer a gate; CLAUDE.md + Red Flags entry only if no gate is possible |
 | Rule that genuinely must be always-on and applies to any project | Skill file or CLAUDE.md (last resort) |
 | Codebase-specific tripwire | Project note, issue comment, or repo guidance |
