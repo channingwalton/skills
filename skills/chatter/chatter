@@ -9,7 +9,7 @@ Subcommands:
   loop <slug> <agent-id>
     stateful read/wait loop; prints the next non-self message batch as JSON.
 
-Thread root is passed via --root (required).
+Thread root: --root if given, else $CHATTER_ROOT, else ./agent-chatter.
 Messages are markdown files with YAML-style frontmatter.
 """
 import argparse

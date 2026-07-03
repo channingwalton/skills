@@ -1,18 +1,15 @@
 ---
 name: fix-loop
-description: Iterative review-fix cycle that orchestrates code-reviewer and fixer to eliminate Critical issues. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
+description: Iterative review-fix cycle that runs code-reviewer then repairs Critical issues until none remain. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
 ---
 
 # Fix Loop
 
 Run a bounded review-fix cycle until all Critical issues are resolved, marked unfixable, or the iteration cap is hit.
 
-`fix-loop` orchestrates two **Skills** — invoke each with the Skill tool. There is no `code-reviewer` or `fixer` subagent_type; `Task(subagent_type: "code-reviewer")` fails with "Agent type not found". Use `Skill(code-reviewer)` / `Skill(fixer)`.
+Review uses the `code-reviewer` **Skill** — invoke it with the Skill tool. There is no `code-reviewer` subagent_type; `Task(subagent_type: "code-reviewer")` fails with "Agent type not found". Use `Skill(code-reviewer)`. Repairs follow the Fixer contract below.
 
-- `code-reviewer` for read-only, disconfirming review
-- `fixer` for minimal targeted repairs
-
-Keep those roles separate. Do not rationalise away findings because you are about to edit the code.
+Keep the reviewer and fixer roles separate even though one agent plays both: findings stand as written. Do not rationalise away findings because you are about to edit the code.
 
 ## Input
 
@@ -34,11 +31,31 @@ For each iteration:
 
 1. REVIEW - announce `Review iteration N/3`; use `code-reviewer` against the current scope. If the user explicitly asks for subagents, a bounded read-only reviewer can be separate from the fixing agent.
 2. TRIAGE - extract only Critical findings. If none remain, stop.
-3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; use `fixer` when available. Fix only Critical findings. Preserve user changes and avoid unrelated refactors.
+3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
 5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.
 
 Warnings and suggestions are reported, not auto-fixed.
+
+## Fixer Contract
+
+Fix only Critical findings. Leave warnings and suggestions unactioned. Preserve user changes and avoid unrelated refactors.
+
+For each finding:
+
+1. READ - inspect the finding, surrounding code, and relevant tests.
+2. FIX - apply the smallest change that resolves the finding.
+3. VERIFY - run the narrowest tests that prove the fix.
+4. TEST - run the project's canonical test command when practical.
+
+If a fix breaks tests:
+
+1. identify the failing fix
+2. revert only that fix
+3. mark the finding unfixable with the reason
+4. re-run verification
+
+A fix iteration is complete only when every Critical finding is fixed or marked unfixable, and verification status is clear.
 
 ## Final Report
 

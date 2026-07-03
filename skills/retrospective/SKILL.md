@@ -33,9 +33,7 @@ keep in place over many sessions, whether or not they ever fire:
 | CLAUDE.md / AGENTS.md standing context | Every session, relevant or not | Last resort — always-on token tax |
 
 Two things are **not** actuators and must never be the proposed fix: the model
-itself (you cannot tune it — see `present-contradicted` below), and the task
-distribution (you observe the failures your actual work surfaces, not a uniform
-sample).
+itself (see `present-contradicted` below), and the task distribution.
 
 Every useful finding must produce an exact proposed edit or follow-up note,
 placed at the **lowest standing-cost actuator that can prevent it**. Single-session
@@ -58,16 +56,11 @@ status reports. The unit of analysis is *several sessions*, not one.
    not known, ask. If transcripts are unavailable, stop.
 2. The review window must be defined: last fortnight, last N sessions, since
    last retro, or a supplied file list. If unspecified, ask.
-3. The VERIFY ledger must be locatable. It is a small file the retro writes to
-   itself and reads at the next retro. Locate it in order:
-   a. `$RETROSPECTIVE_LEDGER` — if set, that is the ledger path; use it.
-   b. otherwise ask the user, and suggest they export `RETROSPECTIVE_LEDGER` so
-      future retros find it without asking.
-   The file can live anywhere the host keeps durable state across sessions (a
-   notes store, a repo, a config dir); the skill does not prescribe *where* it
-   lives, only how to find it. If the path resolves but the file does not exist
-   yet, this is the first run — VERIFY is skipped and the ledger is created
-   there at APPLY.
+3. The VERIFY ledger must be locatable: `$RETROSPECTIVE_LEDGER` if set,
+   otherwise ask the user (and suggest exporting it for future runs). It is a
+   small file the retro writes at APPLY and reads at the next retro; it can
+   live anywhere durable across sessions. If the file does not exist yet, this
+   is the first run — VERIFY is skipped and the ledger is created at APPLY.
 
 ## The Process
 
@@ -96,7 +89,7 @@ status reports. The unit of analysis is *several sessions*, not one.
 ### 1. DISTIL
 
 Create a tmp working dir once (`mktemp -d`). For each transcript: read one,
-write one structured note, move on. Do not load all transcripts together.
+write one structured note, move on.
 
 **Isolate genuine failures first — this is the judgement-heavy step.** A failure
 is output that took a wrong path, missed a constraint, or declared done
@@ -143,8 +136,7 @@ For each isolated failure, capture:
   cost ranks findings, it does not gate them.
 - the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
   see the architectural issue", "the test didn't actually run"). These are the
-  highest-value signal and they are already in the transcript — harvest them, do
-  not build a hook to capture them.
+  highest-value signal and they are already in the transcript — harvest them.
 - context waste: large tool outputs that went unused; note the producing tool,
   command, or skill `!`-injection
 - redundancy signals: skill text, rules, installed surfaces, or injected
@@ -209,13 +201,10 @@ For each edit still marked open:
      itself the finding: the edit did not stick. Do not re-apply blindly; note
      it and treat as `untested-this-window` for cost purposes (you cannot
      attribute a cost change to an edit that wasn't in force).
-     Optionally, if the host makes a cheap whole-config fingerprint available (a
-     VCS revision id, or a content hash recorded at the last APPLY), a change in it
-     flags that *something* in the governed config moved between retros — useful as a coarse "expect
-     reduced attributability this window" hint. This is detection, not
-     attribution: it tells you something changed, not what, and it cannot recover
-     prior state. Treat it as advisory; the per-edit presence check above is the
-     load-bearing one.
+     Optionally, a cheap whole-config fingerprint (a VCS revision id or content
+     hash recorded at the last APPLY) that has changed flags that *something*
+     moved between retros. Advisory only — detection, not attribution; the
+     per-edit presence check above is the load-bearing one.
 3. **If exercised and attributable:** did the targeted failure's cost fall?
    - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
    - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
@@ -342,12 +331,9 @@ wasted~tok: <total> | restarts: <n> | wrong-outcome: <n> |
 edits to date: <confirmed-effective>/<ineffective>/<untested>
 ```
 
-Write the ledger to the path resolved in Preconditions (`$RETROSPECTIVE_LEDGER`, or the path the user confirmed); it
-must persist across sessions and be read only at retro time — never written into
-a working session's context.
-Do **not** add a hook that writes observations on the fly: the transcript is
-already the complete on-the-fly record, and an in-session writer spends live
-tokens in the very session you are trying to make cheaper.
+Write the ledger to the path resolved in Preconditions. It is read only at
+retro time — do **not** add a hook that writes observations on the fly; the
+transcript is already the complete on-the-fly record.
 
 ## Output Shape
 

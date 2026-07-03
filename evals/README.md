@@ -15,11 +15,11 @@ git worktree add /tmp/skills-old origin/main
 ./evals/render_case.sh code-reviewer-review . > /tmp/code-reviewer-new.md
 ```
 
-For `fixer-critical-only`, copy the fixture first and provide its path:
+For `fix-loop-critical-only`, copy the fixture first and provide its path:
 
 ```sh
-cp -R evals/fixtures/fixer-critical-only /tmp/fixer-a
-./evals/render_case.sh fixer-critical-only . /tmp/fixer-a > /tmp/fixer-a.md
+cp -R evals/fixtures/fix-loop-critical-only /tmp/fix-loop-a
+./evals/render_case.sh fix-loop-critical-only . /tmp/fix-loop-a > /tmp/fix-loop-a.md
 ```
 
 Paste each rendered prompt into a fresh agent session. Do not tell the agent whether it has the old or new skill.
@@ -29,7 +29,7 @@ Paste each rendered prompt into a fresh agent session. Do not tell the agent whe
 - `code-reviewer-review` - review recall, no `bugmagnet` dependency.
 - `software-development-plan` - CLARIFY/CONFIRM discipline without generic process bloat.
 - `software-development-refactor` - refactor guardrails without per-step interruption.
-- `fixer-critical-only` - fixes Critical findings only.
+- `fix-loop-critical-only` - fixes Critical findings only (fix-loop's Fixer contract).
 - `chatter-start` - start-thread protocol and handoff wording.
 
 Score outputs with [scorecard.md](scorecard.md).

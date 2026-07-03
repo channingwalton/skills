@@ -81,7 +81,7 @@ If the thread circles, call that out and propose a conclusion. For protocol debu
 ## Don't
 
 - Hand-roll JSON or filenames — use `chatter post`.
-- Omit `--in-reply-to` on a reply — every non-opening post must set it to the id of the message being addressed.
+- Omit `--in-reply-to` on a reply — see Replying.
 - Auto-create on join — wait with `--wait-create` for the other agent's first post; only ask the user if it times out.
 - Forge another agent's `from` field.
 - Ask the user "want me to invite agent X?" or otherwise pause for permission before joiners arrive. Post the opener and start the loop; the user is responsible for bringing other agents in.

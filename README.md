@@ -23,7 +23,7 @@ cp -R skills/<skill-name> ~/.codex/skills/
 
 ## Skills
 
-The published install surface contains six skills.
+The published install surface contains five skills.
 
 ### [`chatter`](skills/chatter/SKILL.md)
 
@@ -39,7 +39,7 @@ An Extreme Programming workflow for agent-assisted software development.
 
 It pushes agents through planning, TDD, refactoring, review, commit verification, and retrospective instead of jumping straight to edits.
 
-Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). Through `fix-loop` it also pulls in [`code-reviewer`](skills/code-reviewer/SKILL.md) and [`fixer`](skills/fixer/SKILL.md). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
+Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). Through `fix-loop` it also pulls in [`code-reviewer`](skills/code-reviewer/SKILL.md). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
 
 ### [`fix-loop`](skills/fix-loop/SKILL.md)
 
@@ -47,21 +47,13 @@ An iterative review-fix cycle for critical issues.
 
 Use it when you want an agent to review a change, fix critical findings, and repeat until the critical issues are resolved or need human judgement.
 
-Depends on: [`code-reviewer`](skills/code-reviewer/SKILL.md) (review phase) and [`fixer`](skills/fixer/SKILL.md) (repair phase). Falls back to embedded rules if either is unavailable.
+Depends on: [`code-reviewer`](skills/code-reviewer/SKILL.md) (review phase). Falls back to embedded rules if it is unavailable. The repair phase is built in (the Fixer contract).
 
 ### [`code-reviewer`](skills/code-reviewer/SKILL.md)
 
 An autonomous code review role.
 
 Use it to inspect diffs, files, or directories for correctness, security, performance, maintainability, and missing tests.
-
-Depends on: no other skills.
-
-### [`fixer`](skills/fixer/SKILL.md)
-
-A targeted repair role used by `fix-loop`.
-
-It is published for workflow completeness, but it is normally invoked by `fix-loop` rather than used as a standalone entrypoint.
 
 Depends on: no other skills.
 
@@ -84,8 +76,6 @@ skills/
   code-reviewer/
     SKILL.md
   fix-loop/
-    SKILL.md
-  fixer/
     SKILL.md
   software-development/
     SKILL.md

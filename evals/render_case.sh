@@ -38,10 +38,9 @@ case "$case_id" in
     skill_file "skills/software-development/SKILL.md"
     skill_file "skills/software-development/references/planning.md"
     skill_file "skills/software-development/references/development.md"
-    skill_file "skills/software-development/references/refactor.md"
     ;;
-  fixer-critical-only)
-    skill_file "skills/fixer/SKILL.md"
+  fix-loop-critical-only)
+    skill_file "skills/fix-loop/SKILL.md"
     ;;
   chatter-start)
     skill_file "skills/chatter/SKILL.md"
@@ -53,9 +52,9 @@ case "$case_id" in
 esac
 
 printf '\n# User Task\n\n'
-if [ "$case_id" = "fixer-critical-only" ]; then
+if [ "$case_id" = "fix-loop-critical-only" ]; then
   if [ -z "$fixture_root" ]; then
-    fixture_root="/path/to/copied/evals/fixtures/fixer-critical-only"
+    fixture_root="/path/to/copied/evals/fixtures/fix-loop-critical-only"
   fi
   sed "s#{fixture_root}#$fixture_root#g" "$case_file" | sed -n '1,260p'
 else

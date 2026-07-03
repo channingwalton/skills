@@ -34,7 +34,7 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 - Does not ask after every tiny refactor step.
 - Refuses or redirects behaviour-changing cleanup back to DEVELOP.
 
-## fixer-critical-only
+## fix-loop-critical-only
 
 - Fixes only Critical findings.
 - Leaves Warning/Suggestion items untouched or reports them as not actioned.

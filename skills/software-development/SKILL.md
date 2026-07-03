@@ -19,7 +19,7 @@ No task is done until the review step passes or an explicit low-risk exception i
 
 ## Related Skills
 
-- `fix-loop` - use for the DEVELOP review step. It drives `code-reviewer` and `fixer`; do not also run `code-reviewer` on the same diff.
+- `fix-loop` - use for the DEVELOP review step. It drives `code-reviewer` and repairs Critical findings itself; do not also run `code-reviewer` on the same diff.
 - Language skill - use the relevant language skill for Red and Green when one is installed.
 
 ## 📋 PLAN
@@ -61,7 +61,7 @@ If you change a public function signature, read every caller before declaring gr
 
 ### 🔵 Refactor
 
-Clean up while tests are green and the domain is fresh. Keep refactoring while behaviour stays green; ask only when choosing between materially different cleanup directions or expanding scope. See [refactor reference](references/refactor.md).
+Clean up while tests are green and the domain is fresh, one transformation at a time, keeping tests green after each. Ask only when choosing between materially different cleanup directions or expanding scope. If a cleanup alters behaviour or public API, return to DEVELOP and write a test first. State the test status; if tests were not run, say so.
 
 Public signature rule still applies during refactor: after a signature change, read every caller.
 
