@@ -29,4 +29,10 @@ Slice by visible behaviour, not implementation layer.
 3. **Check for gaps** — "Is there a case this plan doesn't handle?"
 4. **Check ordering** — "Does any task depend on something unplanned?"
 
+**Discharge each falsifier with the cheapest evidence that can settle it:**
+
+- **Fact about the current system** ("validation only runs client-side") → read the code, run it, or query the data — never ask the user what the repo can answer.
+- **Fact about intent** ("does 'within the range' mean overlap or containment?") → ask the user; loop back to CLARIFY with a specific question.
+- **Prediction about behaviour** ("the importer already trims whitespace") → execute something: the existing suite, a REPL snippet, a characterisation test. A prediction about *new* behaviour is not discharged at plan time — it becomes the first red test in DEVELOP.
+
 If you can't think of anything that would prove your understanding wrong, that's a warning sign — not a green light.
