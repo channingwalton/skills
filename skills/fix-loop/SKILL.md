@@ -30,7 +30,7 @@ Maximum 3 iterations.
 For each iteration:
 
 1. REVIEW - announce `Review iteration N/3`; use `code-reviewer` against the current scope. If the user explicitly asks for subagents, a bounded read-only reviewer can be separate from the fixing agent.
-2. TRIAGE - extract only Critical findings. If none remain, stop.
+2. TRIAGE - extract Critical findings. A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it — do not park your own true findings as carry-forwards; twice this class shipped to the edge of "done" and was only fixed when an external review re-raised it. If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
 5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.

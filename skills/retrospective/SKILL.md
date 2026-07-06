@@ -89,7 +89,10 @@ status reports. The unit of analysis is *several sessions*, not one.
 ### 1. DISTIL
 
 Create a tmp working dir once (`mktemp -d`). For each transcript: read one,
-write one structured note, move on.
+write one structured note, move on. When distilling via parallel subagents,
+require each to use namespaced scratch paths (e.g. `/tmp/<session-id>-skel.txt`,
+never a shared `/tmp/skel*.txt`) — concurrent agents have clobbered each
+other's extractions and nearly mis-attributed content across transcripts.
 
 **Isolate genuine failures first — this is the judgement-heavy step.** A failure
 is output that took a wrong path, missed a constraint, or declared done
