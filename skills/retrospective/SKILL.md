@@ -183,8 +183,12 @@ session. Four outputs:
    was not used in this window; require either relevant excitation or clear
    overlap evidence.
 
-`references/context-audit.md` holds the script and the noise heuristics. Skip
-this step only when transcripts aren't available as raw JSONL.
+`references/context-audit.md` holds the script and the noise heuristics. The
+script is written against Claude Code's transcript schema and fails silently
+(near-zero totals) on a host that stores a different shape — check the caveat
+there before trusting its numbers. Skip this step when transcripts aren't
+available as raw JSONL, or when porting the script to your host's schema costs
+more than the step is worth.
 
 ### 3. VERIFY
 

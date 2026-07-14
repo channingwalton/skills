@@ -7,7 +7,7 @@ description: Iterative review-fix cycle that runs code-reviewer then repairs Cri
 
 Run a bounded review-fix cycle until all Critical issues are resolved, marked unfixable, or the iteration cap is hit.
 
-Review uses the `code-reviewer` **Skill** — invoke it with the Skill tool. There is no `code-reviewer` subagent_type; `Task(subagent_type: "code-reviewer")` fails with "Agent type not found". Use `Skill(code-reviewer)`. Repairs follow the Fixer contract below.
+Review uses the `code-reviewer` **skill** — load it and follow it in the current agent, however your host invokes skills. It is a skill, not an agent type: do not try to dispatch it as a subagent, because no `code-reviewer` subagent exists to dispatch to. Repairs follow the Fixer contract below.
 
 Keep the reviewer and fixer roles separate even though one agent plays both: findings stand as written. Do not rationalise away findings because you are about to edit the code.
 
@@ -16,7 +16,7 @@ Keep the reviewer and fixer roles separate even though one agent plays both: fin
 Use the supplied files/directories when present. With no explicit scope:
 
 1. uncommitted changes: `git diff --name-only` plus `git diff --name-only --staged`
-2. otherwise recent work: `git diff --name-only HEAD~3`
+2. otherwise recent work: `git diff --name-only HEAD~3`. That revision does not exist in a repo with fewer than four commits — check `git rev-list --count HEAD` first, diff from the root commit when it is shorter, and with a single commit review the files it added (`git show --name-only --format= HEAD`)
 3. otherwise ask what to review
 
 ## Baseline

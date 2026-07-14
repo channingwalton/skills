@@ -26,8 +26,15 @@ blocks: `text`, `thinking`, `tool_use` (has `name`, `input`, `id`),
 `tool_result` (has `content`, `tool_use_id`, `is_error`). Map `tool_use.id` →
 `name` to attribute each result to its tool.
 
-Adjust the glob / window for the agent and host. If transcripts aren't JSONL,
-skip MEASURE.
+**The scripts below are written against Claude Code's transcript schema** (the
+glob, the event `type` values, the content-block shape above). Other hosts store
+sessions differently — Codex, for one, writes its own JSONL with a different
+event shape — so changing the glob is usually *not* enough. A schema mismatch
+does not raise: the scripts run happily and report near-zero, which reads as "no
+waste" when it means "parsed nothing". Before trusting any output, sanity-check
+that `total~tok` is the right order of magnitude for the window; if it isn't,
+port the block-extraction to your host's shape or skip MEASURE. If transcripts
+aren't JSONL at all, skip MEASURE.
 
 Format drift: hosts change what they store, so sanity-check two things before
 trusting the composition output. If `thinking` reads 0, the host likely strips
