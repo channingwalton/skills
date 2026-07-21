@@ -121,5 +121,6 @@ Before relying on a claim, ground it:
 | A test passed | Confirm it exercised the new behaviour, not only a happy path or name-filtered slice. |
 | A tool said success | Inspect the real effect, output, or served UI when that is the user-facing contract. |
 | A rename or move is done | Search the old name, path, and package across code, docs, and README. |
+| A grep/rg sweep found "all" the sites | Confirm against the authoritative enumeration — run the code, query the schema, list the subclasses — a pattern only finds what matches its own text. |
 
 If you cannot ground a claim, say so rather than building on it.
