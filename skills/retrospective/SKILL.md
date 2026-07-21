@@ -94,6 +94,12 @@ require each to use namespaced scratch paths (e.g. `/tmp/<session-id>-skel.txt`,
 never a shared `/tmp/skel*.txt`) — concurrent agents have clobbered each
 other's extractions and nearly mis-attributed content across transcripts.
 
+Before distilling, look for surviving notes from an earlier aborted run (the tmp
+dirs persist) and reuse them — distil only what is missing. Cap concurrent distil
+subagents at ~12: a 40-agent fan-out exhausted the session limit mid-run and
+abandoned an entire retro (~1.85M tokens, 12 of 40 notes never written), which
+cost more than every failure that retro was studying.
+
 **Isolate genuine failures first — this is the judgement-heavy step.** A failure
 is output that took a wrong path, missed a constraint, or declared done
 prematurely. Exclude normal iteration:

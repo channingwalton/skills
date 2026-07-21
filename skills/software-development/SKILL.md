@@ -107,7 +107,7 @@ Before reporting the scope done, disconfirm it — this is the FALSIFY step from
 3. The check must observe the claim's own signal on the real substrate. A claim about live/real behaviour is not grounded by a fake/mock gateway, a green suite, or a proxy (a DB row, a projection, a log stream with silent failure paths) — say what you observed and on what substrate. If the DoD names a rendered UI, observe the rendered surface, not the store/API behind it. A reported runtime bug is "fixed" only when the symptom is reproduced-then-gone or traced to the exact failing line — never fix-by-analogy.
 4. If a check cannot be run, report that behaviour as **unverified**, not done — and do not commit a behavioural fix whose operative cause is unconfirmed.
 
-When disconfirming by mutating a file, revert with `git checkout -- <file>` and verify with `git diff` — never a `cp` backup restore (an aliased `cp -i` declines silently and has left mutations in tracked files).
+When disconfirming by mutating a file, undo only the mutation — the inverse `Edit`, or the `sed -i.bak` sidecar — then verify with `git diff`. Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and has three times destroyed the implementation under test. Never restore from a `cp` backup, and never read a chained `&& echo` as proof the command before it ran — an aliased `cp -i`/`rm -i` declines silently while the echo still prints; use `command cp` / `command rm`.
 
 Then report the change and the verification you ran.
 
