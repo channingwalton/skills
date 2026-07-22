@@ -58,7 +58,8 @@ status reports. The unit of analysis is *several sessions*, not one.
    last retro, or a supplied file list. If unspecified, ask.
 3. The VERIFY ledger must be locatable: `$RETROSPECTIVE_LEDGER` if set,
    otherwise ask the user (and suggest exporting it for future runs). It is a
-   small file the retro writes at APPLY and reads at the next retro; it can
+   small file the retro writes at APPLY and reads at the next retro, holding
+   applied edits, rejected proposals, and one summary row per run; it can
    live anywhere durable across sessions. If the file does not exist yet, this
    is the first run — VERIFY is skipped and the ledger is created at APPLY.
 
@@ -72,9 +73,10 @@ status reports. The unit of analysis is *several sessions*, not one.
               injection bloat, unused dumps), what did each failure COST in
               wasted calls/tokens, AND which sessions were abandoned and
               restarted. See `references/context-audit.md`.
-3. VERIFY   — Read the ledger. For each open prior edit: was its failure mode
-              EXERCISED in this window, and if so did its cost FALL? Close the
-              loop before proposing anything new.
+3. VERIFY   — Read the ledger. For each open prior edit: is it still IN FORCE,
+              was its failure mode EXERCISED this window (or can it be
+              REPLAYED), and did its cost FALL? Close the loop before proposing
+              anything new.
 4. AUDIT    — Recurring worked / recurring didn't, with note references.
 5. SORT     — Place each fix at the lowest standing-cost actuator that prevents it;
               cap by recurrence, weight by cost.
@@ -205,6 +207,8 @@ For each edit still marked open:
    the targeted failure mode? If not, mark `untested-this-window`, carry it
    forward, **conclude nothing.** Absence of a failure on an un-exercised mode is
    not evidence the edit worked. Reverting on an unobserved mode injects noise.
+   A replay (item 3) manufactures its own excitation — a replayable edit need
+   not wait for the task mix to come round again.
 2. **Presence check.** Look for the prior edit's recorded `after` text in the
    governed file now. The ledger already stores it (see APPLY), so this needs no
    snapshot of the original config — just confirm the edit is still literally in
@@ -218,15 +222,51 @@ For each edit still marked open:
      hash recorded at the last APPLY) that has changed flags that *something*
      moved between retros. Advisory only — detection, not attribution; the
      per-edit presence check above is the load-bearing one.
-3. **If exercised and attributable:** did the targeted failure's cost fall?
+3. **Replay, where the failure is replayable.** The cost check below is
+   *observational* — a later window with a different task mix — which is weak
+   attribution. Where the failure has a mechanically checkable signal, re-run it
+   and get an answer now instead of waiting a window.
+
+   Replayable means all three:
+   - the trigger is reconstructable from the transcript (the prompt, command, or
+     file state that led to the wrong turn);
+   - success is decidable without judgement — a tool loaded or it didn't, a path
+     resolved or it didn't, a gate fired or it didn't, a check ran or it didn't;
+   - re-running has no side effects: read-only, or confined to a throwaway dir.
+     **Never replay work that writes to real files, commits, pushes, sends, or
+     mutates remote state.** In doubt, don't replay.
+
+   Most work fails the test — investigations, design calls, anything scored by
+   judgement. Harness-shaped failures (tool loading, gating, path handling,
+   delegation) usually pass it, and they are also the ones an actuator can fix,
+   so the overlap is worth exploiting.
+
+   Run the trigger in a fresh session with the edit in force:
+   - Failure recurs → `refuted-by-replay`. Definitive. The edit does not prevent
+     it; revise or revert, do not stack.
+   - Failure absent → `confirmed-by-replay`, and note that this is **one-sided**:
+     it shows the failure is absent under the edit, not that the edit caused the
+     absence. For the causal claim, re-run once with the edit removed and check
+     the failure returns — only when removal is cheap and reversible (a skill
+     file, not a live hook), and put it back immediately.
+
+   Cap replays at a handful per retro; each costs roughly a session. Spend them
+   on the most expensive failure classes. Where replay isn't possible or isn't
+   worth its cost, fall back to the observational check below and say which was
+   used — a replayed verdict and an observed one are not the same strength of
+   evidence.
+
+4. **If exercised and attributable:** did the targeted failure's cost fall?
    - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
    - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
      second patch on top.** Stacking is integrator windup.
-4. **Trend check (skill-level).** Read prior retros' SUMMARY rows (see APPLY).
+5. **Trend check (skill-level).** Read prior retros' SUMMARY rows (see APPLY).
    Compare this window's headline — wasted tokens, restarts, wrong-outcome
    mistakes, roughly normalised per session — against the trajectory, and read
-   the cumulative edit hit-rate (confirmed-effective vs ineffective vs
-   still-untested). Flat-or-rising waste across several retros despite
+   the cumulative edit hit-rate (confirmed vs ineffective vs still-untested —
+   replay verdicts count in the confirmed and ineffective buckets, flagged as
+   replayed since they are stronger evidence). Flat-or-rising waste across
+   several retros despite
    confirmed-effective edits means the retro is fixing the wrong things; a high
    ineffective or perpetually-untested rate means diagnoses are poor or edits
    target modes too rare to matter. Either is a finding about the retro
@@ -314,10 +354,17 @@ One rule per paragraph, one example max. Cap proposals at the top 3-5 by
 that cannot name the failure class it targets is not a controller action —
 demote it to a note.
 
+**Check the ledger's REJECTED rows before proposing.** If a proposal targets a
+failure class that already has a rejected row, either drop it or state in the
+proposal what is different this time — a new actuator, new evidence, a changed
+cost. Re-proposing the same edit for the same reason a retro later is churn, and
+it wastes the user's attention on a decision they already made.
+
 ### 7. CONFIRM
 
 Present the report (Output Shape below) and ask "apply these and record the
-retro summary?". Do nothing without a yes.
+retro summary?". Do nothing without a yes. Note which proposals the user
+declines, and the reason if one is given; those become REJECTED rows at APPLY.
 
 ### 8. APPLY
 
@@ -334,6 +381,21 @@ Record the `after` text verbatim — VERIFY uses it as the presence anchor next
 retro (step 2 above). The optional config fingerprint is the advisory
 whole-config hint described there.
 
+Then record one REJECTED row per proposal that did **not** land — declined by
+the user at CONFIRM, or reverted at VERIFY as `ineffective` or
+`refuted-by-replay`:
+
+```
+REJECTED | date (shell `date`) | file+section | actuator |
+targets-failure-class | proposed after-text (abridged) |
+reason: <declined: … | ineffective | refuted-by-replay>
+```
+
+This is the rejected-edit buffer. PROPOSE reads it to avoid re-raising a
+decision the user already made, and it keeps a record of which actuators have
+been tried against a failure class and failed — which is itself evidence when
+that class recurs.
+
 Then append **one SUMMARY row for the retro itself** — written every run after
 CONFIRM, even when zero edits were approved, because VERIFY's trend check needs
 the headline regardless:
@@ -341,7 +403,8 @@ the headline regardless:
 ```
 SUMMARY | date (shell `date`) | window: <N sessions / range> |
 wasted~tok: <total> | restarts: <n> | wrong-outcome: <n> |
-edits to date: <confirmed-effective>/<ineffective>/<untested>
+edits to date: <confirmed>/<ineffective>/<untested> (replayed: <n> of confirmed+ineffective) |
+rejected to date: <n>
 ```
 
 Write the ledger to the path resolved in Preconditions. It is read only at
@@ -355,8 +418,9 @@ APPLY, the ledger.
 
 ```
 ## Loop check (VERIFY)
-- <prior edit>: <confirmed-effective | ineffective | untested-this-window>
-  (<edit still present? exercised this window? cost change?>)
+- <prior edit>: <confirmed-by-replay | refuted-by-replay | confirmed-effective |
+  ineffective | untested-this-window>
+  (<edit still present? replayed or observed? exercised this window? cost change?>)
 - Trend: <this window's headline vs prior SUMMARY rows; cumulative edit
   hit-rate> (directional only)
 
@@ -414,6 +478,14 @@ Nothing is written (beyond tmp notes) until the user approves.
 - Open loop: proposing new edits without VERIFYing prior ones against the ledger.
 - Attribution without excitation: crediting a prior edit when its failure mode was never exercised.
 - On-the-fly ledger: a hook writing observations mid-session.
+- Re-proposing a declined edit without checking the ledger's REJECTED rows, or
+  without naming what changed since.
+- Replaying anything with side effects — writes to real files, commits, pushes,
+  sends, remote mutations.
+- Reading a one-sided replay pass as causal: the failure not recurring under the
+  edit is not the same as the edit having prevented it.
+- Replaying the unreplayable: forcing a judgement-scored task through a replay
+  and treating the verdict as mechanical.
 - Layer mixing / portability leak: project facts, local paths, private tools, or personal workflow in a shared skill.
 - One-window trend: reading a single retro's headline as a trajectory.
 - Absence treated as evidence: no recurrence in this window does not prove a past issue is fixed.

@@ -48,6 +48,17 @@ analysis is several sessions, not one.
   summary row per retro (window headline plus cumulative edit hit-rate), so the
   retro audits *itself*: a high ineffective or never-exercised rate, or waste
   that stays flat despite confirmed edits, is a finding about the retro.
+- **Replay where replay is possible.** Waiting a window to see whether a failure
+  got cheaper is weak attribution — the task mix moves underneath you. Where a
+  failure is mechanically checkable and free of side effects (tool loading,
+  gating, path handling — the harness-shaped ones), VERIFY re-runs the trigger
+  instead of waiting, and reports whether a verdict was replayed or merely
+  observed. Most work is not replayable; the skill says so rather than
+  pretending otherwise.
+- **Remembers what it rejected.** Declined proposals and reverted edits get
+  their own ledger rows, so a later retro does not re-raise a decision already
+  made — and so a failure class carries the record of which actuators have
+  already been tried against it and failed.
 
 ## Install
 
@@ -82,10 +93,13 @@ The retro prints inline. It writes only two things to disk:
 1. **Per-session intermediate notes** — into a throwaway tmp dir (`mktemp -d`).
    Discarded after the run.
 2. **The VERIFY ledger** — a small durable file the retro writes to itself at
-   APPLY and reads at the next retro. One row per applied edit: what changed,
-   which actuator, the failure class it targets, the edit's `after` text
-   verbatim (used next time to check the edit is still in force), and
-   optionally a config fingerprint. Plus one summary row per retro run —
+   APPLY and reads at the next retro. Three row types. One per applied edit:
+   what changed, which actuator, the failure class it targets, the edit's
+   `after` text verbatim (used next time to check the edit is still in force),
+   and optionally a config fingerprint. One per **rejected** proposal — declined
+   at CONFIRM, or reverted at VERIFY as ineffective or refuted by replay — with
+   the reason, which PROPOSE reads next time so it does not re-raise a settled
+   decision. Plus one summary row per retro run —
    window headline (wasted tokens, restarts, wrong-outcome mistakes) and edit
    hit-rate to date — which the next retro reads as a trend check on the retro
    itself. It must persist across sessions and live
