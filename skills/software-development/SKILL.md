@@ -39,31 +39,42 @@ Use this task format when a visible plan is needed:
 ```markdown
 ## Tasks for [Feature]
 
-1. [ ] [Task description] - [acceptance criteria] - DoD: new tests for new behaviour + affected-submodule tests green (whole project if no submodules) + fix-loop clean + for UI/runtime tasks, the changed behaviour exercised in the running app (browser **or** native app — drive it, or capture a screenshot; use your agent's run/verify skills if it has them); if it truly can't be run, report it unverified — "build/tests green" is not "done"
+1. [ ] [Task description] — [acceptance criteria]
 
 Assumptions surfaced: [key premises]
 First task: [task 1]
 ```
 
+Definition of Done, for every task:
+
+- new tests for new behaviour
+- affected-submodule tests green (whole project if no submodules)
+- `fix-loop` clean
+- for UI/runtime tasks, the changed behaviour exercised in the running app — browser or
+  native. Drive it or capture a screenshot; use your agent's run/verify skills if it has
+  them. If it truly cannot be run, report it **unverified**: "build/tests green" is not
+  "done".
+
 ## 🔴 DEVELOP
 
 Each task runs this cycle.
 
+Throughout it — Red, Green, and Refactor alike — a change to a public function's name,
+parameter list, or return type means reading every caller before claiming the step is done.
+Compile-passing is weak evidence; some languages silently coerce between function types. See
+[development reference](references/development.md).
+
 ### 🔴 Red
 
-Write a failing test for the next behaviour. If the change threads through multiple call sites, write coverage for each relevant caller before going green; helper-only tests can miss broken wiring. See [development reference](references/development.md).
+Write a failing test for the next behaviour. If the change threads through multiple call sites, write coverage for each relevant caller before going green; helper-only tests can miss broken wiring.
 
 ### 🟢 Green
 
 Make only the failing test pass. Avoid drive-by edits to adjacent code, comments, or formatting.
 
-If you change a public function signature, read every caller before declaring green. Compile-passing is not enough.
-
 ### 🔵 Refactor
 
 Clean up while tests are green and the domain is fresh, one transformation at a time, keeping tests green after each. Ask only when choosing between materially different cleanup directions or expanding scope. If a cleanup alters behaviour or public API, return to DEVELOP and write a test first. State the test status; if tests were not run, say so.
-
-Public signature rule still applies during refactor: after a signature change, read every caller.
 
 After any out-of-band mutation (formatter, codegen, `sed`/script rewrite), re-read a file before editing it; for bulk renames prefer your edit tool's own replace-everywhere over a shell rewrite, and run the formatter at the gate, not between edit batches.
 
@@ -73,9 +84,7 @@ Run `fix-loop` unless the change is pure non-code, or is one-line build/config w
 
 Stop if critical findings or test regressions remain. The task is not done.
 
-Treat new behaviour without new tests as critical, even if sibling code lacks tests. Precedent is not permission.
-
-Edge cases flagged as critical by review must be covered before the task is done.
+Triage new behaviour without new tests as **critical**, not a warning. Edge cases flagged as critical by review must be covered before the task is done.
 
 ## 💾 COMMIT
 

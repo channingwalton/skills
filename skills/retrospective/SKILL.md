@@ -465,27 +465,18 @@ Nothing is written (beyond tmp notes) until the user approves.
 
 ## Red Flags
 
-- Generic advice ("test more", "plan better") — name a file and section or drop it.
-- No anchor: proposed edit lacks a file path and section.
-- Pure analysis: no proposed edit or follow-up note.
-- Premature application: edits applied before user approval.
-- Wrong actuator: fix placed higher in standing cost than needed (a CLAUDE.md line where a gate would do).
-- Louder wallpaper: answering `present-not-consulted` with more standing context.
-- Count over cost: a headline that weights a papercut equal to an expensive misdirection.
-- Cost over outcome: dismissing a wrong-outcome mistake because it was token-cheap.
-- Restart blindness: treating an abandoned-and-restarted session as a clean ending.
-- Spending on the floor: proposing a fix for `present-contradicted`.
-- Open loop: proposing new edits without VERIFYing prior ones against the ledger.
-- Attribution without excitation: crediting a prior edit when its failure mode was never exercised.
-- On-the-fly ledger: a hook writing observations mid-session.
-- Re-proposing a declined edit without checking the ledger's REJECTED rows, or
-  without naming what changed since.
-- Replaying anything with side effects — writes to real files, commits, pushes,
-  sends, remote mutations.
-- Reading a one-sided replay pass as causal: the failure not recurring under the
-  edit is not the same as the edit having prevented it.
-- Replaying the unreplayable: forcing a judgement-scored task through a replay
-  and treating the verdict as mechanical.
-- Layer mixing / portability leak: project facts, local paths, private tools, or personal workflow in a shared skill.
-- One-window trend: reading a single retro's headline as a trajectory.
-- Absence treated as evidence: no recurrence in this window does not prove a past issue is fixed.
+The rules are in the steps above; these five are the ones that get violated while the
+step is being followed, so check them against the finished report:
+
+- **Pure analysis** — a finding with no proposed edit or follow-up note, or an edit with no
+  file path and section. Generic advice ("test more", "plan better") is this failure wearing
+  a conclusion.
+- **Wrong actuator** — the fix sits higher in standing cost than the failure warrants. The
+  usual form is answering `present-not-consulted` with louder standing context, which feeds
+  the blindness *and* taxes every session.
+- **Count over cost, cost over outcome** — a headline that weights a papercut equal to an
+  expensive misdirection, or that drops a wrong-outcome mistake because it was token-cheap.
+  Both dimensions rank; neither gates the other.
+- **Absence read as evidence** — no recurrence proves nothing when the failure mode was
+  never exercised, a one-sided replay pass is not causal, and one window is not a trend.
+- **Premature application** — edits applied before the user says yes at CONFIRM.
