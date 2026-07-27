@@ -15,10 +15,17 @@ where a fix can land, not a list of what this skill ships. Two things are explic
 not actuators and never the proposed fix: the model itself, and the task
 distribution.
 
-See [`SKILL.md`](./SKILL.md) for the full process, actuator ordering, sort table,
-output shape, and red flags. The MEASURE step's context-audit script and the
-manual cost-per-failure method are in
-[`references/context-audit.md`](./references/context-audit.md).
+See [`SKILL.md`](./SKILL.md) for the process, actuator ordering, sort table,
+output shape, and red flags. Per-step detail is progressively disclosed — each
+file is read at its step, and on a given run two of the four often are not opened
+at all:
+
+| File | Read at |
+|---|---|
+| [`references/distil.md`](./references/distil.md) | DISTIL — failure isolation, availability tags, capture list. Self-contained, so it can be handed to a distil subagent on its own. |
+| [`references/context-audit.md`](./references/context-audit.md) | MEASURE — context-audit script, noise heuristics, manual cost-per-failure method, restart detection. |
+| [`references/verify.md`](./references/verify.md) | VERIFY — excitation, presence, replay, cost and trend checks. Skipped entirely on a first run. |
+| [`references/ledger.md`](./references/ledger.md) | APPLY — the three ledger row formats. Needed only once the user approves. |
 
 ## When to invoke
 

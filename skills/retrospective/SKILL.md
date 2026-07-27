@@ -88,79 +88,40 @@ status reports. The unit of analysis is *several sessions*, not one.
               versioned plugin/cache copies that will be overwritten.
 ```
 
+### Step detail lives in `references/`
+
+Read each file at its step, not before. Two of the four are often not opened at
+all: VERIFY is skipped on a first run, and the ledger formats are needed only
+after the user approves.
+
+| File | Read it |
+|---|---|
+| `references/distil.md` | At DISTIL — and hand it to each distil subagent |
+| `references/context-audit.md` | At MEASURE, when transcripts are raw JSONL |
+| `references/verify.md` | At VERIFY, unless this is the first-ever run |
+| `references/ledger.md` | At APPLY, after the user says yes at CONFIRM |
+
 ### 1. DISTIL
 
-Create a tmp working dir once (`mktemp -d`). For each transcript: read one,
-write one structured note, move on. When distilling via parallel subagents,
-require each to use namespaced scratch paths (e.g. `/tmp/<session-id>-skel.txt`,
-never a shared `/tmp/skel*.txt`) — concurrent agents have clobbered each
-other's extractions and nearly mis-attributed content across transcripts.
+**Read `references/distil.md` before starting.** It holds the failure-isolation
+test, the in-window availability tags, and the per-failure capture list, and it
+is written to be self-contained — when fanning out, give each distil subagent
+that file plus its one transcript and nothing else.
 
-Before distilling, look for surviving notes from an earlier aborted run (the tmp
-dirs persist) and reuse them — distil only what is missing. Cap concurrent distil
-subagents at ~12: a 40-agent fan-out exhausted the session limit mid-run and
-abandoned an entire retro (~1.85M tokens, 12 of 40 notes never written), which
-cost more than every failure that retro was studying.
+Orchestration rules, needed here rather than in the reference:
 
-**Isolate genuine failures first — this is the judgement-heavy step.** A failure
-is output that took a wrong path, missed a constraint, or declared done
-prematurely. Exclude normal iteration:
+- One tmp working dir (`mktemp -d`), one transcript at a time, one structured
+  note each. Do not load them all together.
+- Reuse surviving notes from an earlier aborted run before distilling afresh.
+- Cap concurrent distil subagents at ~12, each with a namespaced scratch path.
+  A 40-agent fan-out exhausted the session limit mid-run and abandoned an entire
+  retro (~1.85M tokens), and shared scratch paths have caused agents to clobber
+  each other's extractions.
 
-- Expected red→green loops. A typechecker/compiler reporting a legitimate next
-  constraint is the loop working, NOT a failure. Discriminator: did the error
-  report a real next step (exclude), or the model's own fabrication / wrong
-  choice (count)? *Example: Unison emitting `needs {Storage}` then `needs
-  {Random}` is incremental ability discovery — exclude. Submitting a symbol that
-  does not exist and getting "couldn't figure out what X refers to" is a failure
-  — the model invented it.*
-- Retries against genuinely unknowable-in-advance state where no prior tool
-  could have surfaced the answer. Judge honestly — often one *could* have.
-
-If isolating a failure is itself ambiguous, say so. A high ambiguous rate is a
-finding: failures aren't cleanly separable from iteration in these transcripts.
-
-For each isolated failure, capture:
-
-- what went wrong and what would have prevented it
-- **was the preventing information in-window at the failure turn?** Judge by the
-  `tool_result` the model saw (not the full `toolUseResult`). Tag one of:
-  - `present-not-consulted` — info was in-window/standing context, model acted
-    before consulting it (often runs the right check correctly *elsewhere*).
-    Harness-fixable: move guidance to a point-of-action actuator.
-  - `present-contradicted` — info was surfaced and engaged with (read, even
-    restated), model proceeded against it anyway. **The floor — not
-    harness-fixable.** Do not propose an actuator fix; note and move on.
-  - `absent-via-truncation` — info was fetched but capped out of the
-    `tool_result`. Fix: the cap/summariser.
-  - `absent-via-never-retrieved` — never fetched. Fix: retrieval/ordering, or a
-    file never opened.
-  - `absent-via-compaction` — present pre-compaction, failure post-compaction.
-    Compaction dropped load-bearing signal — a finding, call it out.
-  - `cant-tell` — cannot determine (compaction boundary; or info isn't
-    tool-surfaceable). Abstain rather than force a label.
-- **cost**: wasted calls and/or wasted wall-clock attributable to the failure.
-  This is the weight that matters — a cosmetic self-correction and a ten-call
-  misdirection are not equal units.
-- **outcome severity, independent of cost**: did the mistake produce a wrong
-  outcome — a wrong answer accepted, a premature "done", a bad edit left in
-  place? A token-cheap mistake with a wrong outcome is a high-severity finding;
-  cost ranks findings, it does not gate them.
-- the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
-  see the architectural issue", "the test didn't actually run"). These are the
-  highest-value signal and they are already in the transcript — harvest them.
-- context waste: large tool outputs that went unused; note the producing tool,
-  command, or skill `!`-injection
-- redundancy signals: skill text, rules, installed surfaces, or injected
-  guidance that appear to add no behavioural delta. Record the evidence type:
-  `duplicated-by-default`, `covered-by-other-skill`, `loaded-unused`,
-  `exercised-no-delta`, or `low-value-token-tax`. Treat these as inferences, not
-  proof; absence of visible use is weak evidence unless the relevant trigger was
-  exercised.
-- explicit "remember X for retro" markers, verbatim
-- candidate findings
-
-Save as `<tmpdir>/YYYY-MM-DD-HHMMSS-session.md`; get the timestamp from shell
-`date`.
+Each note carries three fields the later steps sort on: an in-window
+availability tag (`present-not-consulted`, `present-contradicted`,
+`absent-via-truncation`, `absent-via-never-retrieved`, `absent-via-compaction`,
+`cant-tell`), a **cost**, and an **outcome severity** independent of that cost.
 
 ### 2. MEASURE
 
@@ -200,80 +161,22 @@ more than the step is worth.
 
 ### 3. VERIFY
 
-Close the loop on prior corrections before proposing new ones. Read the ledger.
-For each edit still marked open:
+**Skip this step, and `references/verify.md` with it, only on the first-ever run
+(no ledger yet).** Otherwise close the loop on prior corrections before proposing
+new ones: read the ledger, then work `references/verify.md` for each edit still
+marked open — the excitation check, the presence check, replay where the failure
+is replayable, the cost check, and the skill-level trend check.
 
-1. **Excitation check first.** Did this window contain work that could trigger
-   the targeted failure mode? If not, mark `untested-this-window`, carry it
-   forward, **conclude nothing.** Absence of a failure on an un-exercised mode is
-   not evidence the edit worked. Reverting on an unobserved mode injects noise.
-   A replay (item 3) manufactures its own excitation — a replayable edit need
-   not wait for the task mix to come round again.
-2. **Presence check.** Look for the prior edit's recorded `after` text in the
-   governed file now. The ledger already stores it (see APPLY), so this needs no
-   snapshot of the original config — just confirm the edit is still literally in
-   force.
-   - Still present → the edit survives; proceed to the cost check.
-   - Gone or overwritten → someone reverted or replaced it out-of-retro. That is
-     itself the finding: the edit did not stick. Do not re-apply blindly; note
-     it and treat as `untested-this-window` for cost purposes (you cannot
-     attribute a cost change to an edit that wasn't in force).
-     Optionally, a cheap whole-config fingerprint (a VCS revision id or content
-     hash recorded at the last APPLY) that has changed flags that *something*
-     moved between retros. Advisory only — detection, not attribution; the
-     per-edit presence check above is the load-bearing one.
-3. **Replay, where the failure is replayable.** The cost check below is
-   *observational* — a later window with a different task mix — which is weak
-   attribution. Where the failure has a mechanically checkable signal, re-run it
-   and get an answer now instead of waiting a window.
+Two rules govern the rest, and they are what the step exists to enforce:
 
-   Replayable means all three:
-   - the trigger is reconstructable from the transcript (the prompt, command, or
-     file state that led to the wrong turn);
-   - success is decidable without judgement — a tool loaded or it didn't, a path
-     resolved or it didn't, a gate fired or it didn't, a check ran or it didn't;
-   - re-running has no side effects: read-only, or confined to a throwaway dir.
-     **Never replay work that writes to real files, commits, pushes, sends, or
-     mutates remote state.** In doubt, don't replay.
+- **Absence of a failure on an un-exercised mode is not evidence the edit
+  worked.** Mark it `untested-this-window` and conclude nothing.
+- **An edit that did not reduce its target's cost is revised or reverted, never
+  supplemented.** Stacking a second patch on a failed one is integrator windup.
 
-   Most work fails the test — investigations, design calls, anything scored by
-   judgement. Harness-shaped failures (tool loading, gating, path handling,
-   delegation) usually pass it, and they are also the ones an actuator can fix,
-   so the overlap is worth exploiting.
-
-   Run the trigger in a fresh session with the edit in force:
-   - Failure recurs → `refuted-by-replay`. Definitive. The edit does not prevent
-     it; revise or revert, do not stack.
-   - Failure absent → `confirmed-by-replay`, and note that this is **one-sided**:
-     it shows the failure is absent under the edit, not that the edit caused the
-     absence. For the causal claim, re-run once with the edit removed and check
-     the failure returns — only when removal is cheap and reversible (a skill
-     file, not a live hook), and put it back immediately.
-
-   Cap replays at a handful per retro; each costs roughly a session. Spend them
-   on the most expensive failure classes. Where replay isn't possible or isn't
-   worth its cost, fall back to the observational check below and say which was
-   used — a replayed verdict and an observed one are not the same strength of
-   evidence.
-
-4. **If exercised and attributable:** did the targeted failure's cost fall?
-   - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
-   - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
-     second patch on top.** Stacking is integrator windup.
-5. **Trend check (skill-level).** Read prior retros' SUMMARY rows (see APPLY).
-   Compare this window's headline — wasted tokens, restarts, wrong-outcome
-   mistakes, roughly normalised per session — against the trajectory, and read
-   the cumulative edit hit-rate (confirmed vs ineffective vs still-untested —
-   replay verdicts count in the confirmed and ineffective buckets, flagged as
-   replayed since they are stronger evidence). Flat-or-rising waste across
-   several retros despite
-   confirmed-effective edits means the retro is fixing the wrong things; a high
-   ineffective or perpetually-untested rate means diagnoses are poor or edits
-   target modes too rare to matter. Either is a finding about the retro
-   itself — report it in the Loop check. Directional only: task mix and model
-   changes confound, and one window is never a trend.
-
-Skip VERIFY only on the first-ever run (no ledger yet).
+Each open edit ends the step with one verdict: `confirmed-by-replay`,
+`refuted-by-replay`, `confirmed-effective`, `ineffective`, or
+`untested-this-window`.
 
 ### 4. AUDIT
 
@@ -369,47 +272,18 @@ declines, and the reason if one is given; those become REJECTED rows at APPLY.
 ### 8. APPLY
 
 After CONFIRM only. Edit the canonical source, verify the loaded file changed,
-report the landed path. Then record in the ledger, one row per applied edit:
+report the landed path.
 
-```
-date (shell `date`) | file+section | actuator | targets-failure-class |
-before→after (verbatim — VERIFY's presence anchor) | [optional: config-fingerprint] |
-status: open
-```
+Then read `references/ledger.md` and append three kinds of row to the ledger at
+the path resolved in Preconditions:
 
-Record the `after` text verbatim — VERIFY uses it as the presence anchor next
-retro (step 2 above). The optional config fingerprint is the advisory
-whole-config hint described there.
-
-Then record one REJECTED row per proposal that did **not** land — declined by
-the user at CONFIRM, or reverted at VERIFY as `ineffective` or
-`refuted-by-replay`:
-
-```
-REJECTED | date (shell `date`) | file+section | actuator |
-targets-failure-class | proposed after-text (abridged) |
-reason: <declined: … | ineffective | refuted-by-replay>
-```
-
-This is the rejected-edit buffer. PROPOSE reads it to avoid re-raising a
-decision the user already made, and it keeps a record of which actuators have
-been tried against a failure class and failed — which is itself evidence when
-that class recurs.
-
-Then append **one SUMMARY row for the retro itself** — written every run after
-CONFIRM, even when zero edits were approved, because VERIFY's trend check needs
-the headline regardless:
-
-```
-SUMMARY | date (shell `date`) | window: <N sessions / range> |
-wasted~tok: <total> | restarts: <n> | wrong-outcome: <n> |
-edits to date: <confirmed>/<ineffective>/<untested> (replayed: <n> of confirmed+ineffective) |
-rejected to date: <n>
-```
-
-Write the ledger to the path resolved in Preconditions. It is read only at
-retro time — do **not** add a hook that writes observations on the fly; the
-transcript is already the complete on-the-fly record.
+- **one per applied edit**, carrying its `after` text verbatim — that is the
+  anchor VERIFY uses next retro to check the edit is still in force;
+- **one REJECTED row per proposal that did not land**, declined at CONFIRM or
+  reverted at VERIFY, so PROPOSE does not re-raise a settled decision;
+- **one SUMMARY row for the retro itself**, written every run even when zero
+  edits were approved, because VERIFY's trend check needs the headline
+  regardless.
 
 ## Output Shape
 
