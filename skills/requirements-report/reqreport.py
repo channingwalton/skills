@@ -642,7 +642,7 @@ def tests_html(rid: str, tests: list[TestCase], src) -> str:
         else:
             msg, detail = c.failure
             head = "\n".join(detail.splitlines()[:12])
-            out.append(f'<div class="msg"><strong>{esc(msg)}</strong></div>'
+            out.append(f'<pre class="msg"><strong>{esc(msg)}</strong></pre>'
                        "<details open><summary>what was tested, and why it failed</summary>"
                        f"{snippet}<pre>{esc(head)}</pre></details>")
     if not tests:
