@@ -24,6 +24,7 @@ No task is done until the review step passes or an explicit low-risk exception i
 
 ## 📋 PLAN
 
+Ensure you have read the context such as parent tickets, issues, stories, or epics.
 Plan before coding when the work is ambiguous, user-facing, multi-step, or risky. For small explicit fixes, use a compressed plan and move straight to the first test.
 
 Sequence: DISCUSS -> CLARIFY -> SLICE -> FALSIFY -> CONFIRM. See [planning reference](references/planning.md) for detailed checklists and examples.
@@ -126,7 +127,7 @@ Before relying on a claim, ground it:
 
 | Claim | Grounding action |
 |---|---|
-| A note, ticket, memory, or comment says how code works | Open the source and confirm it still holds. |
+| A note, ticket, memory, or comment says how code works | Open the source and confirm it still holds. Sources include code, documents, tickets and their parent tickets |
 | A test passed | Confirm it exercised the new behaviour, not only a happy path or name-filtered slice. |
 | A tool said success | Inspect the real effect, output, or served UI when that is the user-facing contract. |
 | A rename or move is done | Search the old name, path, and package across code, docs, and README. |
