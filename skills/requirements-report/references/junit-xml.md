@@ -62,7 +62,7 @@ go test -v ./... 2>&1 | go-junit-report -set-exit-code > build/test-results/test
 `gotestsum --junitfile build/test-results/test/report.xml` is the friendlier option.
 
 Go test names are function identifiers — see *Languages where the test name is an
-identifier* below. `func TestReqHealthLiveOk` works with plain `go test`.
+identifier* below. `func Test_req_health_live_ok` works with plain `go test`.
 
 ## Rust
 
@@ -119,9 +119,10 @@ the same separator. Plain `#[test]` and plain `go test` work — **no `libtest-m
 subtest wrapper, no converter beyond the usual JUnit one.**
 
 The id is matched against the ids your documents define, longest first, so a descriptive
-suffix costs nothing and a requirement may have several tests:
-`req_health_live_ok_when_starting` and `req_health_live_ok_under_load` both bind
-`#health-live-ok`. An unrecognised `req_` is reported as an orphan, so typos fail the build.
+suffix costs nothing. Only one test may bind an ID; split distinct behaviours into separate
+requirements rather than naming both `req_health_live_ok_when_starting` and
+`req_health_live_ok_under_load`. An unrecognised `req_` is reported as an orphan, so typos
+fail the build.
 
 The `req_` prefix is not decoration. Without it, a bare id would match by accident: `live_ok`
 is a substring of `live_ok_fails`, and short ids like `err` would match almost anything. The
