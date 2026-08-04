@@ -14,6 +14,8 @@ Any failing test blocks — do not proceed.
 
 **Probe local services before invoking tools that depend on them.** Codegen hitting a GraphQL endpoint, migrations hitting a DB, auth flows hitting Keycloak — a one-line port check (`lsof -iTCP:<port> -sTCP:LISTEN`) beats an `ECONNREFUSED` round-trip. Cached schema / fixture files often make the live service optional; prefer those if they exist.
 
+Avoid testing with hardcoded dates that will start failing in the future unless the test clock is managed (eg. travel_to(...) in ruby)
+
 ## Red Flags
 
 - "I'll mirror the existing X exactly" — mirroring copies shape, not contract. Find the case where this isn't X, and test that.
