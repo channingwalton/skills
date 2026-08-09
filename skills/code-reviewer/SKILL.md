@@ -29,9 +29,24 @@ Review one of: file paths, a git diff or PR reference, or a directory.
    traversal; (c) a new field added to a write/persist path — check every
    skip/dedup/`identical?`/early-return guard on that path accounts for it;
    (d) a fix that re-enables a disabled path (CI trigger, feature flag, cron,
-   scheduled job) — check what that path will do on its first run, not just
-   that it now runs.
-5. VERIFY - every Critical finding needs a concrete reproduction: failing test, REPL snippet, or step-by-step trace with specific input values. If you cannot prove it, downgrade or drop it.
+   scheduled job) — check what that path will do on its first run, and in the
+   first environment the merge reaches: read the branch triggers in CI config
+   before calling a change ready for review. A merge that auto-promotes to
+   production with no human gate is part of the blast radius.
+   **LANDING SURFACE - open the surface the change lands on, not only the diff.**
+   A diff can be entirely correct and still ship a defect that is only visible
+   one file away, and this class is the one an outside reviewer keeps finding
+   first. For a change that adds data to a handler, read that handler's
+   authorisation guard (a worker-reachable endpoint leaked cross-worker data
+   through three review passes). For a fix that matches or joins on an id, read
+   the code that *writes* that id — a green disconfirmation run proves the test
+   is load-bearing, not that the fixture is producible (a fix that matched
+   nothing in production was committed, pushed, and defended to reviewers as
+   intentional). For a change to a response payload or public contract, probe
+   the generated artefact rather than reasoning about the source. For a claim
+   about how code behaves, open the code — a review conducted over ticket text
+   alone wrote factually inverted security statements into shared tickets.
+5. VERIFY - every Critical finding needs a concrete reproduction: failing test, REPL snippet, or step-by-step trace with specific input values. If you cannot prove it, downgrade or drop it. A search result is not an enumeration: `head -N` truncates, your own `grep -v` filter drops real hits, indirection (`klass:`, DI, reflection) hides call sites, and first-party source is not the generated client a consumer calls. Never let a command print its own conclusion, and never read the absence of a failure marker as success.
 6. DISCOVER - report missing tests for uncovered behaviours and edge cases.
 7. DUPLICATES - run the project's configured duplicate-code check when one exists, scoped to the review target where possible. Report missing tooling separately from code findings.
 8. REPORT - findings only, ordered by severity.

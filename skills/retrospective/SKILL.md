@@ -265,14 +265,24 @@ it wastes the user's attention on a decision they already made.
 
 ### 7. CONFIRM
 
-Present the report (Output Shape below) and ask "apply these and record the
-retro summary?". Do nothing without a yes. Note which proposals the user
-declines, and the reason if one is given; those become REJECTED rows at APPLY.
+**Before asking, write the report to the ledger as a `proposed, not applied`
+section.** An unanswered approval question must cost the run's *edits*, not the
+whole run: on 2026-07-22 a complete run — distil, measure, verify, four
+proposals — ended on a prose "Apply these?" that was never answered, and ~1.55M
+newly-processed tokens, 13 VERIFY verdicts and ~15 catalogued wrong outcomes
+were lost because nothing durable existed before APPLY.
+
+Then present the report (Output Shape below) and ask with **AskUserQuestion, not
+prose** — that same run got a structured window-choice answered in 24 seconds
+and a prose approval answered never. Do nothing further without a yes. Note
+which proposals the user declines, and the reason if one is given; those become
+REJECTED rows at APPLY.
 
 ### 8. APPLY
 
 After CONFIRM only. Edit the canonical source, verify the loaded file changed,
-report the landed path.
+report the landed path. Flip the `proposed, not applied` section written at
+CONFIRM to its final state rather than appending a second copy.
 
 Then read `references/ledger.md` and append three kinds of row to the ledger at
 the path resolved in Preconditions:

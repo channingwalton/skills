@@ -131,6 +131,7 @@ Before relying on a claim, ground it:
 | A test passed | Confirm it exercised the new behaviour, not only a happy path or name-filtered slice. |
 | A tool said success | Inspect the real effect, output, or served UI when that is the user-facing contract. |
 | A rename or move is done | Search the old name, path, and package across code, docs, and README. |
-| A grep/rg sweep found "all" the sites | Confirm against the authoritative enumeration — run the code, query the schema, list the subclasses — a pattern only finds what matches its own text. |
+| A search found "all" the sites | Confirm against the authoritative enumeration — run the code, query the schema, list the subclasses. A pattern only finds what matches its own text, in the tree you aimed it at. Check what your own command discarded: `head -N` truncates, a `grep -v` noise filter drops real hits, dispatch by indirection (`klass:`, DI, reflection) hides call sites, and first-party source is not the generated client a consumer actually calls. |
+| A command's output proves a claim | Never let the command print the conclusion — an `echo "(none = safe)"` appended to a search prints whether or not the search ran, and an error line or non-zero exit anywhere invalidates the whole compound command. Assert on a positive marker (a test count, a task line, a file timestamp), not on the absence of a failure marker: a run that never happened and a run that passed are identical through `\| rg 'FAILED'`. |
 
 If you cannot ground a claim, say so rather than building on it.
