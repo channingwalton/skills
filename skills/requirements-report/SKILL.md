@@ -34,9 +34,21 @@ python3 reqreport.py --requirements requirements/ \
                      --out target/requirements/
 ```
 
-Exit codes are 0 for clean, 1 for requirement problems, and 2 for bad input. Options may
-live in `.reqreport.json` (`requirements`, `junit`, `sources`, `out`, `root`); `--no-gate`
+Exit codes are 0 for clean, 1 for requirement problems, and 2 for bad input. `--no-gate`
 writes the report without failing.
+
+Options may live in `.reqreport.json`. `sources` is a **list**; every other key is a single
+path string:
+
+```json
+{
+  "requirements": "docs",
+  "junit": "target/surefire-reports",
+  "sources": ["src/test"],
+  "out": "target/requirements",
+  "root": "."
+}
+```
 
 Set `--root` from the project root known to the build tool. It defaults to the working
 directory. Never derive it from Git: repository and project roots differ in monorepos.

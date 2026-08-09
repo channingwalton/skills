@@ -17,6 +17,12 @@ scriptable, the third partly so:
 
 Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 
+**Except for images.** `chars/4` is wrong by ~30x on a base64 image block — a screenshot is
+~250k chars but costs roughly `(w x h)/750` ≈ 1.4k tokens. Left in, 11 screenshots read as
+470k phantom tokens and top the oversize ranking, which is a fabricated finding pointing at
+a real habit. The script below counts them separately; never fold an image back into a char
+total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
+
 ## Inputs
 
 Raw session transcripts as JSONL. Default location:
@@ -101,7 +107,7 @@ def blocks(c):
 
 cat = collections.Counter()        # category -> chars
 tool_out = collections.Counter()   # tool name -> tool_result chars
-err = dup = oversize = 0
+err = dup = oversize = img_n = 0
 hook_hash = collections.Counter(); hook_size = {}
 
 for f in files:
@@ -134,7 +140,17 @@ for f in files:
                     id2path[b.get('id')] = (b.get('input') or {}).get('file_path')
                 cat['tool_use_input'] += len(json.dumps(b.get('input', {})))
             elif bt == 'tool_result':
-                c = b.get('content', ''); s = c if isinstance(c, str) else json.dumps(c)
+                c = b.get('content', '')
+                if isinstance(c, str):
+                    s = c
+                else:
+                    # Split image blocks out before measuring. A base64 PNG is ~250k chars
+                    # but costs ~(w*h)/750 ≈ 1.4k tokens, so chars/4 overstates it ~30x and
+                    # floats screenshots to the top of the oversize ranking.
+                    parts = c if isinstance(c, list) else [c]
+                    imgs = [x for x in parts if isinstance(x, dict) and x.get('type') == 'image']
+                    img_n += len(imgs)
+                    s = json.dumps([x for x in parts if x not in imgs])
                 cat['tool_result'] += len(s)
                 name = id2name.get(b.get('tool_use_id'), '?'); tool_out[name] += len(s)
                 if b.get('is_error'): err += len(s)
@@ -154,6 +170,7 @@ for k, v in tool_out.most_common(12):
     print(f"  {k:24}{tok(v):>9,}")
 dupe_boiler = sum(hook_size[h]*(n-1) for h, n in hook_hash.items() if n > 1)
 print(f"\nerrors~tok={tok(err):,}  dup-reads~tok={tok(dup):,}  oversize>40k~tok={tok(oversize):,}  repeated-boilerplate~tok={tok(dupe_boiler):,}")
+print(f"images={img_n} (~{img_n*1400:,} tok, excluded from the char counts above)")
 print("\nmost-repeated injected blocks:")
 for h, n in hook_hash.most_common(6):
     if n > 1: print(f"  x{n:<4}{hook_size[h]:>7,}c each")

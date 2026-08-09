@@ -826,7 +826,15 @@ def main() -> int:
             value = cfg.get(key, fallback)
             setattr(args, key, Path(value) if value is not None else None)
     if not args.sources:
-        args.sources = [Path(s) for s in cfg.get("sources", [])]
+        # "sources" is the only list-valued key, so it is the only one a scalar can enter
+        # silently: a bare string iterates per character, yielding Path('/') among the
+        # letters, and the run then walks the whole filesystem instead of failing.
+        raw = cfg.get("sources", [])
+        if isinstance(raw, str):
+            raw = [raw]
+        elif not isinstance(raw, list):
+            die(f'{args.config}: "sources" must be a list of paths, or one path string')
+        args.sources = [Path(s) for s in raw]
 
     # Resolved once, because display_path compares it against resolved source paths and a
     # symlinked or relative root would never match one.
