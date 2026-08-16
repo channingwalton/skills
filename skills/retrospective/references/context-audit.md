@@ -23,6 +23,28 @@ Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 a real habit. The script below counts them separately; never fold an image back into a char
 total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
 
+## Two traps the retro's own MEASURE keeps hitting
+
+Both have now fired in two consecutive retros — the MEASURE step reporting a
+measurement artefact as a finding. Guard against both before trusting a number:
+
+1. **Exclude the retro's own run.** The distil fleet runs *during* MEASURE, so its
+   subagent transcripts fall inside the mtime window and dominate the noise
+   buckets — one run measured 585k `dup-read` tok and 526k `oversize` tok that
+   were 73k and 84k once the fleet was excluded (8x and 6x inflation, each
+   pointing at a fabricated top-finding). Set `SELF` to the retro's own project
+   dir substring and drop it from every glob (the script below does this in the
+   composition pass; apply the same filter to the restart script).
+
+2. **Re-ground and date the evidence before reporting a defect.** A raw `grep`
+   count over transcripts is not an event count — it sweeps subagent quotes and
+   assistant prose. An error appearing *in* the window is not proof it is still
+   live. Before banking any measurement- or grep-derived "standing defect", read
+   the current config/source and date the actual events: two retros reported a
+   dead hook ("99 occurrences") and an "unfixed" bug that both dissolved on
+   checking current state. This is the same `assert-before-check` class the
+   run's own gate targets, committed by the run reporting it.
+
 ## Inputs
 
 Raw session transcripts as JSONL. Default location:
@@ -99,8 +121,10 @@ import json, os, glob, time, collections, hashlib, re
 
 DAYS = 7
 REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)  # adjust marker per host
+SELF = ''  # this retro's own project-dir substring, e.g. '-Users-you-dev-skills'; its distil
+           # fleet runs NOW and floats to the top of dup-read/oversize/tool-output if left in.
 files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-         if time.time() - os.path.getmtime(f) < DAYS*86400]
+         if time.time() - os.path.getmtime(f) < DAYS*86400 and (not SELF or SELF not in f)]
 
 def blocks(c):
     return c if isinstance(c, list) else ([{'type':'text','text':c}] if isinstance(c, str) else [])

@@ -100,7 +100,7 @@ Before committing:
 
 No red commits. No pushes without a green check for the commit being pushed.
 
-If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed.
+If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed. A review pass is also spent when its diff is discarded: if you rebuild or substantially rewrite the implementation after it was reviewed, re-review the diff that actually ships before COMMIT/PR — review attaches to the code being merged, not to an approach you replaced, and a rebuilt fix shipped to a PR unreviewed had its real defect found only by an external reviewer.
 
 If the user, repository, or agent platform specifies a co-author trailer, include that exact trailer. Otherwise use the current agent's appropriate public attribution if known; do not hard-code another agent's identity.
 
