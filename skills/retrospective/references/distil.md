@@ -17,10 +17,17 @@ never a shared `/tmp/skel*.txt`) — concurrent agents have clobbered each
 other's extractions and nearly mis-attributed content across transcripts.
 
 Before distilling, look for surviving notes from an earlier aborted run (the tmp
-dirs persist) and reuse them — distil only what is missing. Cap concurrent distil
-subagents at ~12: a 40-agent fan-out exhausted the session limit mid-run and
+dirs persist) and reuse them — distil only what is missing.
+
+Cap distil subagents at ~12 **per retro session** — the limit is cumulative
+spawns, not concurrency. Panes/forks are not released when an agent finishes: on
+2026-09-20 the 13th spawn failed with `fork failed: Device not configured` even
+though all 12 earlier agents had already completed and returned, costing 8 lost
+spawns mid-run. Earlier, a 40-agent fan-out exhausted the session limit and
 abandoned an entire retro (~1.85M tokens, 12 of 40 notes never written), which
-cost more than every failure that retro was studying.
+cost more than every failure that retro was studying. Plan for ~12 subagent
+notes; distil any remainder yourself in-session, and state in the report how
+many sessions were examined each way.
 
 ## Isolating genuine failures
 
@@ -72,6 +79,13 @@ For each isolated failure, capture:
 - the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
   see the architectural issue", "the test didn't actually run"). These are the
   highest-value signal and they are already in the transcript — harvest them.
+  **Check whether `thinking` blocks actually carry content first.** Some hosts
+  store them empty (this one does: 2,042 blocks, 0 chars, across the 2026-09-20
+  window), so the model's private reasoning is unrecoverable and these
+  recognitions must come from assistant *text*. Say so in the note when thinking
+  is empty, and prefer `cant-tell` over `present-contradicted` wherever the
+  distinction between "engaged with and overrode" and "never registered" rests
+  on reasoning you cannot see — that boundary decides what counts as the floor.
 - context waste: large tool outputs that went unused; note the producing tool,
   command, or skill `!`-injection
 - redundancy signals: skill text, rules, installed surfaces, or injected
