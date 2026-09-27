@@ -18,7 +18,7 @@ Run the row for your host:
 | Host | Invocation | Scope |
 |---|---|---|
 | Claude Code | `code-review` skill with an explicit level and target: `code-review high <target>` on iteration 1, `code-review medium <target>` after. A bare call reuses the user's last level. Pass no `--fix`, `--comment`, or `ultra`. | Target is the Input or NARROW scope: paths, a branch, or a PR. |
-| Codex | Shell out to `codex review` with a scope flag: `--uncommitted`, `--base <branch>`, or `--commit <sha>`. The `/review` slash command is user-only. | Diff only. Pass the NARROW files as the prompt argument, e.g. `codex review --uncommitted "Focus on: a.rb, b.rb"`. |
+| Codex | Shell out to `codex review` with a scope flag: `--uncommitted`, `--base <branch>`, or `--commit <sha>`. The `/review` slash command is user-only. | Diff only; a scope flag takes no prompt argument. Later iterations re-run `--uncommitted`, which covers the fixes because this loop never commits. |
 | Other | Run the House checks as the whole review. | Input scope. |
 
 Normalise findings before TRIAGE:
