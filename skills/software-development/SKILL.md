@@ -19,7 +19,7 @@ No task is done until the review step passes or an explicit low-risk exception i
 
 ## Related Skills
 
-- `fix-loop` - use for the DEVELOP review step. It drives `code-reviewer` and repairs Critical findings itself; do not also run `code-reviewer` on the same diff.
+- `fix-loop` - use for the DEVELOP review step. It runs the host's native code review and repairs Critical findings itself; its review covers the diff, so run no second review on it.
 - Language skill - use the relevant language skill for Red and Green when one is installed.
 
 ## 📋 PLAN

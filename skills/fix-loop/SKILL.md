@@ -1,15 +1,43 @@
 ---
 name: fix-loop
-description: Iterative review-fix cycle that runs code-reviewer then repairs Critical issues until none remain. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
+description: Iterative review-fix cycle that runs the host's native code review, adds house checks, then repairs Critical issues until none remain, with baseline and regression control. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
 ---
 
 # Fix Loop
 
 Run a bounded review-fix cycle until all Critical issues are resolved, marked unfixable, or the iteration cap is hit.
 
-Review uses the `code-reviewer` **skill** — load it and follow it in the current agent, however your host invokes skills. It is a skill, not an agent type: do not try to dispatch it as a subagent, because no `code-reviewer` subagent exists to dispatch to. Repairs follow the Fixer contract below.
+Review uses your host's native reviewer plus the House checks below. Repairs follow the Fixer contract below. This loop owns repairs, so the reviewer only reports.
 
 Keep the reviewer and fixer roles separate even though one agent plays both: findings stand as written. Do not rationalise away findings because you are about to edit the code.
+
+## Review
+
+Run the row for your host:
+
+| Host | Invocation | Scope |
+|---|---|---|
+| Claude Code | `code-review` skill with an explicit level and target: `code-review high <target>` on iteration 1, `code-review medium <target>` after. A bare call reuses the user's last level. Pass no `--fix`, `--comment`, or `ultra`. | Target is the Input or NARROW scope: paths, a branch, or a PR. |
+| Codex | Shell out to `codex review` with a scope flag: `--uncommitted`, `--base <branch>`, or `--commit <sha>`. The `/review` slash command is user-only. | Diff only. Pass the NARROW files as the prompt argument, e.g. `codex review --uncommitted "Focus on: a.rb, b.rb"`. |
+| Other | Run the House checks as the whole review. | Input scope. |
+
+Normalise findings before TRIAGE:
+
+| Claude `code-review` | Codex `review` | Triage as |
+|---|---|---|
+| CONFIRMED correctness finding | `[P0]`, `[P1]` | Critical |
+| PLAUSIBLE | `[P2]` | Settle with one command: proven → Critical, not ruled out → Warning |
+| `simplification`, `efficiency`, `reuse` category | `[P3]` | Suggestion |
+
+### House checks
+
+Run these after the native review on every host; native reviewers miss them.
+
+- **Test gaps** - new behaviour without a test is Critical. Report untested edge cases.
+- **Landing surface** - open the surface the change lands on, not only the diff. A diff can be entirely correct and still ship a defect visible one file away. For a change that adds data to a handler, read that handler's authorisation guard (a worker-reachable endpoint leaked cross-worker data through three review passes). For a fix that matches or joins on an id, read the code that *writes* that id — a green disconfirmation run proves the test is load-bearing, not that the fixture is producible (a fix that matched nothing in production was committed, pushed, and defended to reviewers as intentional). For a change to a response payload or public contract, probe the generated artefact rather than reasoning about the source. For data added to any output (errors, logs, emails, API responses), name who can observe it — surfacing existing data to a new audience is an exposure.
+- **Changed strings and signatures** - search the whole repo for other usages and test assertions of the old values.
+- **First run** - a migration that can fail on existing production data is Critical unless the diff proves a safe backfill/default. For a change that re-enables a disabled path (CI trigger, feature flag, cron, scheduled job), check what it does on its first run in the first environment the merge reaches; read the CI branch triggers.
+- **Repro** - every Critical finding carries a failing test, REPL snippet, or trace with concrete input values. Without one, it is a Warning.
 
 ## Input
 
@@ -29,7 +57,7 @@ Maximum 3 iterations.
 
 For each iteration:
 
-1. REVIEW - announce `Review iteration N/3`; use `code-reviewer` against the current scope. If the user explicitly asks for subagents, a bounded read-only reviewer can be separate from the fixing agent.
+1. REVIEW - announce `Review iteration N/3`; run the Review section against the current scope, then normalise its findings.
 2. TRIAGE - extract Critical findings. A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it — do not park your own true findings as carry-forwards; twice this class shipped to the edge of "done" and was only fixed when an external review re-raised it. **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades have twice buried a shipping-blocker under cosmetic framing ("I filed this as a suggestion because I reasoned about the sample as documentation. I did not run the probe that would have shown it, and the probe took one command"). A finding on code introduced in this session is fixed or handed off explicitly — never dropped — before the loop reports done. If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.

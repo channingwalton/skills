@@ -31,9 +31,6 @@ printf 'You are evaluating the candidate skill instructions below. Use only thes
 printf 'Answer the user task directly.\n'
 
 case "$case_id" in
-  code-reviewer-review)
-    skill_file "skills/code-reviewer/SKILL.md"
-    ;;
   software-development-plan|software-development-refactor)
     skill_file "skills/software-development/SKILL.md"
     skill_file "skills/software-development/references/planning.md"

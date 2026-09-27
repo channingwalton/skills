@@ -2,9 +2,9 @@
 
 [![skills.sh](https://skills.sh/b/channingwalton/skills)](https://skills.sh/channingwalton/skills)
 
-A few useful skills I use daily.
+A few useful skills I use daily, written as agent agnostic as possible.
 
-## Quickstart
+## Quick start
 
 Install with `skills.sh`:
 
@@ -39,7 +39,7 @@ An Extreme Programming workflow for agent-assisted software development.
 
 It pushes agents through planning, TDD, refactoring, review, commit verification, and retrospective instead of jumping straight to edits.
 
-Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). Through `fix-loop` it also pulls in [`code-reviewer`](skills/code-reviewer/SKILL.md). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
+Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
 
 ### [`fix-loop`](skills/fix-loop/SKILL.md)
 
@@ -47,15 +47,7 @@ An iterative review-fix cycle for critical issues.
 
 Use it when you want an agent to review a change, fix critical findings, and repeat until the critical issues are resolved or need human judgement.
 
-Depends on: [`code-reviewer`](skills/code-reviewer/SKILL.md) (review phase). Falls back to embedded rules if it is unavailable. The repair phase is built in (the Fixer contract).
-
-### [`code-reviewer`](skills/code-reviewer/SKILL.md)
-
-An autonomous code review role.
-
-Use it to inspect diffs, files, or directories for correctness, security, performance, maintainability, and missing tests.
-
-Depends on: no other skills.
+Depends on: the host's native code review (Claude Code's `code-review` skill or `codex review`), plus built-in house checks. On other hosts the house checks are the whole review. The repair phase is built in (the Fixer contract).
 
 ### [`retrospective`](skills/retrospective/SKILL.md)
 
@@ -65,6 +57,14 @@ Use it when you want to inspect what worked, what failed, and turn useful lesson
 
 Depends on: no other skills.
 
+### [`requirements-report`](skills/requirements-report/SKILL.md)
+
+Requirements-to-tests traceability.
+
+Use it when requirements or a specification drive implementation: link Markdown requirements to tests by ID, then render pass, fail, or untested status from JUnit XML. See the [skill README](skills/requirements-report/README.md) for details.
+
+Depends on: no other skills. Needs a test runner that emits JUnit XML.
+
 ## Structure
 
 ```text
@@ -73,8 +73,6 @@ skills/
     SKILL.md
     chatter
     test_chatter.py
-  code-reviewer/
-    SKILL.md
   fix-loop/
     SKILL.md
   software-development/
@@ -83,6 +81,12 @@ skills/
   retrospective/
     SKILL.md
     README.md
+  requirements-report/
+    SKILL.md
+    README.md
+    reqreport.py
+    test_reqreport.py
+    references/
 ```
 
 Each skill is self-contained. `SKILL.md` is the entrypoint; extra scripts or references live beside it.

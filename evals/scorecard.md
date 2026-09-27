@@ -8,15 +8,6 @@ Score each criterion 0-2:
 
 Prefer the new skill only if it keeps recall while reducing generic output or bad dependencies.
 
-## code-reviewer-review
-
-- Finds the SQL-injection risk from interpolated search text.
-- Finds the timezone/date-boundary risk in `active_on?`.
-- Finds the missing index risk in the migration.
-- Flags missing edge-case tests without invoking `bugmagnet`.
-- Avoids generic style nits and focuses on behaviour/risk.
-- Critical findings include concrete reproduction or trace.
-
 ## software-development-plan
 
 - Does not jump into implementation.
