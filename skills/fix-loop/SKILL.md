@@ -58,7 +58,7 @@ Maximum 3 iterations.
 For each iteration:
 
 1. REVIEW - announce `Review iteration N/3`; run the Review section against the current scope, then normalise its findings.
-2. TRIAGE - extract Critical findings. A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it — do not park your own true findings as carry-forwards; twice this class shipped to the edge of "done" and was only fixed when an external review re-raised it. **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades have twice buried a shipping-blocker under cosmetic framing ("I filed this as a suggestion because I reasoned about the sample as documentation. I did not run the probe that would have shown it, and the probe took one command"). A finding on code introduced in this session is fixed or handed off explicitly — never dropped — before the loop reports done. If nothing remains to fix, stop.
+2. TRIAGE - extract Critical findings. A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it — quote that deferral under *Deferred by user* in the report; without a quotable deferral it stays Remaining Critical ("commit it" and "looks good" are not deferrals, and there is no "left for you to decide" list: one such list shipped three known defects in a notarised release). Do not park your own true findings as carry-forwards; twice this class shipped to the edge of "done" and was only fixed when an external review re-raised it. **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades have twice buried a shipping-blocker under cosmetic framing ("I filed this as a suggestion because I reasoned about the sample as documentation. I did not run the probe that would have shown it, and the probe took one command"). A finding on code introduced in this session is fixed or handed off explicitly — never dropped — before the loop reports done. If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
 5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.
@@ -98,6 +98,9 @@ N/3
 
 ## Remaining Critical
 - [file:line] [issue] - [reason]
+
+## Deferred by user
+- [file:line] [issue] - "[the user's words deferring it]"
 
 ## Noted
 - [file:line] [Warning/Suggestion] - not actioned
