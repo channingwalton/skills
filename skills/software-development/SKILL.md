@@ -100,7 +100,8 @@ Before committing:
 
 No red commits. No pushes without a green check for the commit being pushed.
 
-If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed. A review pass is also spent when its diff is discarded: if you rebuild or substantially rewrite the implementation after it was reviewed, re-review the diff that actually ships before COMMIT/PR — review attaches to the code being merged, not to an approach you replaced, and a rebuilt fix shipped to a PR unreviewed had its real defect found only by an external reviewer.
+- If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed.
+- A review pass is also spent when its diff is discarded: if you rebuild or substantially rewrite the implementation after it was reviewed, re-review the diff that actually ships before COMMIT/PR — review attaches to the code being merged, not to an approach you replaced, and a rebuilt fix shipped to a PR unreviewed had its real defect found only by an external reviewer.
 
 If the user, repository, or agent platform specifies a co-author trailer, include that exact trailer. Otherwise use the current agent's appropriate public attribution if known; do not hard-code another agent's identity.
 
@@ -117,7 +118,9 @@ Before reporting the scope done, disconfirm it — this is the FALSIFY step from
 3. The check must observe the claim's own signal on the real substrate. A claim about live/real behaviour is not grounded by a fake/mock gateway, a green suite, or a proxy (a DB row, a projection, a log stream with silent failure paths) — say what you observed and on what substrate. If the DoD names a rendered UI, observe the rendered surface, not the store/API behind it. A reported runtime bug is "fixed" only when the symptom is reproduced-then-gone or traced to the exact failing line — never fix-by-analogy.
 4. If a check cannot be run, report that behaviour as **unverified**, not done — and do not commit a behavioural fix whose operative cause is unconfirmed.
 
-When disconfirming by mutating a file, undo only the mutation — the inverse `Edit`, or the `sed -i.bak` sidecar — then verify with `git diff`. Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and has three times destroyed the implementation under test. Never restore from a `cp` backup, and never read a chained `&& echo` as proof the command before it ran — an aliased `cp -i`/`rm -i` declines silently while the echo still prints; use `command cp` / `command rm`.
+- When disconfirming by mutating a file, undo only the mutation — the inverse `Edit`, or the `sed -i.bak` sidecar — then verify with `git diff`.
+- Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and has three times destroyed the implementation under test.
+- Never restore from a `cp` backup, and never read a chained `&& echo` as proof the command before it ran — an aliased `cp -i`/`rm -i` declines silently while the echo still prints; use `command cp` / `command rm`.
 
 Then report the change and the verification you ran.
 
