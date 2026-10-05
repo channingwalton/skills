@@ -1,5 +1,16 @@
 # Context audit (MEASURE step)
 
+## Contents
+
+- Two traps the retro's own MEASURE keeps hitting
+- Inputs
+- What to compute
+- Trace to source — the point of the step
+- Script
+- Restart detection
+- Cost per failure (manual — not scripted)
+- Output
+
 The MEASURE step has three outputs. This file covers all three; the first is
 scriptable, the third partly so:
 

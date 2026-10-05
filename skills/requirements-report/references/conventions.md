@@ -1,5 +1,17 @@
 # Conventions
 
+## Contents
+
+- The marker
+- Structure
+- Tables
+- Granularity
+- Test names
+- One requirement, one test
+- One document, one page
+- Naming ids
+- What is deliberately absent
+
 ## The marker
 
 A requirement is any line in a Markdown document carrying an id in backticks:

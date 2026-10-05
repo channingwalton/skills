@@ -1,5 +1,12 @@
 # DISTIL (step 1)
 
+## Contents
+
+- Working directory and fan-out
+- Isolating genuine failures
+- What to capture per failure
+- Note file
+
 For each transcript in the window, in isolation: read it, isolate genuine
 failures (not normal iteration), write a structured note. One transcript at a
 time; do not load them all together.

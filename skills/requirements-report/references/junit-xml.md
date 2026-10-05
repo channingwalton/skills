@@ -1,5 +1,18 @@
 # Getting JUnit XML out of a test runner
 
+## Contents
+
+- JVM
+- Python
+- JavaScript / TypeScript
+- Go
+- Rust
+- .NET
+- Ruby
+- PHP
+- Languages where the test name is an identifier
+- Verifying
+
 The report joins requirements to tests through JUnit XML. Every mainstream runner can
 produce it; some do by default, most need a flag or a plugin. **Always verify by running the
 tests and listing the output directory** — defaults change and projects override them.
