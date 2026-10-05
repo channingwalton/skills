@@ -39,14 +39,6 @@ Every useful finding must produce an exact proposed edit or follow-up note,
 placed at the **lowest standing-cost actuator that can prevent it**. Single-session
 findings are noted but only escalated if high-severity.
 
-## When to Use
-
-Triggers:
-
-- Fortnightly / end of a milestone / "let's do a retro"
-- "What's been recurring?" / "what did we learn?" / "review the last few sessions"
-- "How well have the skills been working lately?"
-
 **Not for** single-session end-of-task review, mid-task check-ins, or routine
 status reports. The unit of analysis is *several sessions*, not one.
 
