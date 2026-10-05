@@ -23,7 +23,7 @@ cp -R skills/<skill-name> ~/.codex/skills/
 
 ## Skills
 
-The published install surface contains five skills.
+The published install surface contains six skills.
 
 ### [`chatter`](skills/chatter/SKILL.md)
 
@@ -65,6 +65,14 @@ Use it when requirements or a specification drive implementation: link Markdown 
 
 Depends on: no other skills. Needs a test runner that emits JUnit XML.
 
+### [`pair-programming`](skills/pair-programming/SKILL.md)
+
+Pair with an agent on a change you build yourself.
+
+Use it when you want help thinking through a feature, its design options, and the code changes, while you keep the design and the keyboard. It protects your theory of the system (in Peter Naur's sense) so you can explain and extend the code afterwards. See the [skill README](skills/pair-programming/README.md) for details.
+
+Depends on: no other skills.
+
 ## Structure
 
 ```text
@@ -87,6 +95,9 @@ skills/
     reqreport.py
     test_reqreport.py
     references/
+  pair-programming/
+    SKILL.md
+    README.md
 ```
 
 Each skill is self-contained. `SKILL.md` is the entrypoint; extra scripts or references live beside it.
