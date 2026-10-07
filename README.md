@@ -23,7 +23,7 @@ cp -R skills/<skill-name> ~/.codex/skills/
 
 ## Skills
 
-The published install surface contains six skills.
+The published install surface contains seven skills.
 
 ### [`chatter`](skills/chatter/SKILL.md)
 
@@ -73,6 +73,14 @@ Use it when you want help thinking through a feature, its design options, and th
 
 Depends on: no other skills.
 
+### [`mikado`](skills/mikado/SKILL.md)
+
+The Mikado Method for structural changes with a tangled dependency graph.
+
+Use it when a change has snowballed, or when it crosses module or system boundaries through dependencies you can't map up front. The agent tries the goal naively, records each break as a prerequisite in a committed graph, reverts, then lands the change leaf-first with one green commit per leaf. See the [skill README](skills/mikado/README.md) for details.
+
+Depends on: no other skills.
+
 ## Structure
 
 ```text
@@ -96,6 +104,9 @@ skills/
     test_reqreport.py
     references/
   pair-programming/
+    SKILL.md
+    README.md
+  mikado/
     SKILL.md
     README.md
 ```
