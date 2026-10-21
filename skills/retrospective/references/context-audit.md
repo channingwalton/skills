@@ -2,7 +2,7 @@
 
 ## Contents
 
-- Two traps the retro's own MEASURE keeps hitting
+- Three traps the retro's own MEASURE keeps hitting
 - Inputs
 - What to compute
 - Trace to source — the point of the step
@@ -34,10 +34,10 @@ Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 a real habit. The script below counts them separately; never fold an image back into a char
 total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
 
-## Two traps the retro's own MEASURE keeps hitting
+## Three traps the retro's own MEASURE keeps hitting
 
-Both have now fired in two consecutive retros — the MEASURE step reporting a
-measurement artefact as a finding. Guard against both before trusting a number:
+Each has fired at least once — the MEASURE step reporting a measurement
+artefact as a finding. Guard against all three before trusting a number:
 
 1. **Exclude the retro's own run.** The distil fleet runs *during* MEASURE, so its
    subagent transcripts fall inside the mtime window and dominate the noise
@@ -55,6 +55,14 @@ measurement artefact as a finding. Guard against both before trusting a number:
    dead hook ("99 occurrences") and an "unfixed" bug that both dissolved on
    checking current state. This is the same `assert-before-check` class the
    run's own gate targets, committed by the run reporting it.
+
+3. **Drop prompt-only transcripts before counting sessions.** Eval harnesses
+   such as skill-creator's trigger runs launch hundreds of `claude -p` sessions
+   that are killed after the first decision, leaving a transcript with a user
+   prompt and no assistant turn. On 2026-10-07 one run left 498 of them, which
+   would have quadrupled the window's session count. Count a transcript as a
+   session only if it has an assistant turn; report the eval run itself once,
+   by its parent session.
 
 ## Inputs
 
@@ -172,7 +180,8 @@ for f in files:
             elif bt == 'tool_use':
                 id2name[b.get('id')] = b.get('name')
                 if b.get('name') == 'Read':
-                    id2path[b.get('id')] = (b.get('input') or {}).get('file_path')
+                    i = b.get('input') or {}
+                    id2path[b.get('id')] = (i.get('file_path'), i.get('offset'), i.get('limit'))
                 cat['tool_use_input'] += len(json.dumps(b.get('input', {})))
             elif bt == 'tool_result':
                 c = b.get('content', '')
@@ -192,7 +201,7 @@ for f in files:
                 if len(s) > 40000: oversize += len(s)
                 p = id2path.get(b.get('tool_use_id'))
                 if p is not None:
-                    if p in seen_paths: dup += len(s)   # same path Read again this session
+                    if p in seen_paths: dup += len(s)   # same slice Read again this session
                     else: seen_paths.add(p)
 
 tok = lambda c: c // 4
@@ -211,9 +220,11 @@ for h, n in hook_hash.most_common(6):
     if n > 1: print(f"  x{n:<4}{hook_size[h]:>7,}c each")
 ```
 
-The `dup-reads` figure counts the result chars of any `Read` of a path already
-read earlier in the same session — re-reading a file the model already had. It
-attributes by `tool_use.id` → `input.file_path`. Limits worth knowing: it only
+The `dup-reads` figure counts the result chars of any `Read` of a slice already
+read earlier in the same session — re-reading text the model already had. It
+attributes by `tool_use.id` → `(file_path, offset, limit)`, so chunked reads of
+one large file are not counted as re-reads (keyed on path alone, they once made
+26k of a session's 64k "dup-read" tokens). Limits worth knowing: it only
 covers the `Read` tool (not `cat` via `Bash`, which can't be path-attributed
 reliably), and a re-read after a genuine edit is not necessarily waste — treat a
 high figure as a pointer to investigate, not a verdict.

@@ -276,6 +276,11 @@ After CONFIRM only. Edit the canonical source, verify the loaded file changed,
 report the landed path. Flip the `proposed, not applied` section written at
 CONFIRM to its final state rather than appending a second copy.
 
+A gate edit is not applied until its matcher has been replayed against the real
+in-window command forms, including forms the standing rules mandate (e.g.
+`git -C <path>`). All three gates from one retro had matcher defects that were
+found only after APPLY, and one never fired on the form CLAUDE.md requires.
+
 Then read `references/ledger.md` and append three kinds of row to the ledger at
 the path resolved in Preconditions:
 

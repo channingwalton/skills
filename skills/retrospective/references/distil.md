@@ -87,7 +87,8 @@ For each isolated failure, capture:
   see the architectural issue", "the test didn't actually run"). These are the
   highest-value signal and they are already in the transcript — harvest them.
   **Check whether `thinking` blocks actually carry content first.** Some hosts
-  store them empty (this one does: 2,042 blocks, 0 chars, across the 2026-09-20
+  store them empty or as one-line summaries (this one: 2,042 blocks, 0 chars, in
+  the 2026-09-20 window; 5,771 blocks averaging 31 chars in the 2026-10-21
   window), so the model's private reasoning is unrecoverable and these
   recognitions must come from assistant *text*. Say so in the note when thinking
   is empty, and prefer `cant-tell` over `present-contradicted` wherever the
