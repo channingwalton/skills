@@ -53,17 +53,16 @@ Before fixing, run the project's canonical verification command if discoverable 
 
 ## Loop
 
-Maximum 3 iterations.
+Maximum 3 fix iterations, and the loop always ends on a review. After the third FIX and VERIFY, announce `Final review` and run REVIEW once more on the narrowed scope; report its Critical findings under Remaining Critical, unfixed. A fix no review has seen is never reported as reviewed: loops that stopped on a fix shipped their last round unreviewed in five sessions in one fortnight.
 
 For each iteration:
 
 1. REVIEW - announce `Review iteration N/3`; run the Review section against the current scope, then normalise its findings.
 2. TRIAGE - extract Critical findings:
    - A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it.
-   - Quote that deferral under *Deferred by user* in the report; without a quotable deferral it stays Remaining Critical ("commit it" and "looks good" are not deferrals, and there is no "left for you to decide" list: one such list shipped three known defects in a notarised release).
-   - Do not park your own true findings as carry-forwards; twice this class shipped to the edge of "done" and was only fixed when an external review re-raised it.
+   - Every finding the reviewer raised goes in the report under exactly one heading, in the reviewer's words. A finding triaged only in your reasoning is a dropped finding.
+   - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, and findings a check ruled out (name the check). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals: such lists shipped known defects in a notarised release and a public repo.
    - **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades have twice buried a shipping-blocker under cosmetic framing ("I filed this as a suggestion because I reasoned about the sample as documentation. I did not run the probe that would have shown it, and the probe took one command").
-   - A finding on code introduced in this session is fixed or handed off explicitly — never dropped — before the loop reports done.
    - If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
@@ -97,7 +96,7 @@ A fix iteration is complete only when every Critical finding is fixed or marked 
 # Fix Loop Report
 
 ## Iterations
-N/3
+N/3 fix iterations; final review: [clean | N Critical, listed under Remaining Critical]
 
 ## Resolved
 - [file:line] [issue] - fixed in iteration N
@@ -109,7 +108,7 @@ N/3
 - [file:line] [issue] - "[the user's words deferring it]"
 
 ## Noted
-- [file:line] [Warning/Suggestion] - not actioned
+- [file:line] [Suggestion, non-correctness Warning, finding on pre-session code, or ruled out by: check] - not actioned
 
 ## Test Status
 [baseline vs final, including unavailable checks]
