@@ -1,11 +1,11 @@
 ---
 name: software-development
-description: Software development workflow for implementation work that changes code or tests. Use when asked to implement, modify, or fix software behaviour; do not use for shell help, Git-only work, read-only investigation, configuration questions, or general explanation unless code changes are requested. Coordinates planning, TDD, review, and optional commit.
+description: Production-code workflow (plan, TDD, review, optional commit). Use when a task changes an application's or library's source and tests (Scala, Rust, TypeScript and the like, usually under `src/`) to implement, fix, or refactor behaviour. Scripts, build, deployment and CI config, and other code that fails loudly when wrong are edited directly, outside this workflow.
 ---
 
 # Software Development
 
-Use this skill for implementation work that changes code or tests. Do not use it for shell help, CLI usage, Git-only work, read-only investigation, configuration questions, or general technical explanation unless the user explicitly asks for code changes.
+Use this workflow for production code: an application's or library's source and its tests. When the change turns out to be a script, or build, deployment or CI config, edit it directly and run it to check.
 
 The workflow is:
 
