@@ -69,7 +69,10 @@ evidence.
 
 ## 4. Cost check, if exercised and attributable
 
-Did the targeted failure's cost fall?
+Did the targeted failure's cost fall? Check the cost that the edit targeted:
+corrections, a count of wrong outcomes, or tokens for an edit applied before
+the retro counted corrections. An edit that lowered corrections and raised
+questions to the user moved the cost; mark it `ineffective`.
 
 - Fell → `confirmed-effective`. Becomes a consolidation candidate in SORT.
 - Did not / regressed → `ineffective`. **Revise or revert — do not stack a
@@ -78,13 +81,16 @@ Did the targeted failure's cost fall?
 ## 5. Trend check (skill-level)
 
 Read prior retros' SUMMARY rows (see `references/ledger.md`). Compare this
-window's headline — wasted tokens, restarts, wrong-outcome mistakes, roughly
-normalised per session — against the trajectory, and read the cumulative edit
+window's headline — the correction rate, the question rate, accepted changes
+per human hour, restarts, wrong-outcome mistakes, roughly normalised per
+session — against the trajectory, and read the cumulative edit
 hit-rate (confirmed vs ineffective vs still-untested — replay verdicts count in
 the confirmed and ineffective buckets, flagged as replayed since they are
 stronger evidence). Flat-or-rising waste across several retros despite
 confirmed-effective edits means the retro is fixing the wrong things; a high
 ineffective or perpetually-untested rate means diagnoses are poor or edits
 target modes too rare to matter. Either is a finding about the retro
-itself — report it in the Loop check. Directional only: task mix and model
-changes confound, and one window is never a trend.
+itself — report it in the Loop check. Compare each measure only with prior rows
+that carry it; older rows carry wasted tokens and no corrections.
+Directional only: task mix and model changes confound, and one window is never
+a trend.

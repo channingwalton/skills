@@ -40,7 +40,9 @@ approved, because VERIFY's trend check needs the headline regardless:
 
 ```
 SUMMARY | date (shell `date`) | window: <N sessions / range> |
-wasted~tok: <total> | restarts: <n> | wrong-outcome: <n> |
+corrections: <n> (<n per human turn>) | questions: <n per human turn> |
+human~hours: <total> | accepted: <n> (<n per human hour>) | wasted~tok: <total> |
+restarts: <n> | wrong-outcome: <n> |
 edits to date: <confirmed>/<ineffective>/<untested> (replayed: <n> of confirmed+ineffective) |
 rejected to date: <n>
 ```

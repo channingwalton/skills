@@ -2,27 +2,23 @@
 
 ## Contents
 
-- Three traps the retro's own MEASURE keeps hitting
+- Four traps the retro's own MEASURE keeps hitting
 - Inputs
 - What to compute
 - Trace to source — the point of the step
 - Script
 - Restart detection
-- Cost per failure (manual — not scripted)
 - Output
 
-The MEASURE step has three outputs. This file covers all three; the first is
-scriptable, the third partly so:
+This file covers two of the MEASURE outputs. Corrections and throughput are in
+`references/corrections.md`.
 
 1. **Context waste** (scriptable) — quantify where a window's context tokens
    went, and trace the biggest noise to the skill / command / habit that
    produced it. Aggregate across all transcripts in the window — a totals pass,
-   not a per-session note.
-2. **Cost per failure** (manual) — tally the wasted calls/tokens each isolated
-   failure cost, so the retro's headline is cost-weighted not count-based. This
-   is a judgement tally over the DISTIL notes, not a script output — see "Cost
-   per failure" below for why.
-3. **Restarts** (script surfaces candidates, judgement confirms) — find
+   not a per-session note. Tokens are a diagnosis here, not the cost: a finding
+   earns an edit when it explains a failure that the user corrected.
+2. **Restarts** (script surfaces candidates, judgement confirms) — find
    abandoned-and-re-attempted sessions across the window. See "Restart
    detection" below.
 
@@ -34,18 +30,18 @@ Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 a real habit. The script below counts them separately; never fold an image back into a char
 total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
 
-## Three traps the retro's own MEASURE keeps hitting
+## Four traps the retro's own MEASURE keeps hitting
 
 Each has fired at least once — the MEASURE step reporting a measurement
-artefact as a finding. Guard against all three before trusting a number:
+artefact as a finding. Guard against all four before trusting a number:
 
 1. **Exclude the retro's own run.** The distil fleet runs *during* MEASURE, so its
    subagent transcripts fall inside the mtime window and dominate the noise
    buckets — one run measured 585k `dup-read` tok and 526k `oversize` tok that
    were 73k and 84k once the fleet was excluded (8x and 6x inflation, each
    pointing at a fabricated top-finding). Set `SELF` to the retro's own project
-   dir substring and drop it from every glob (the script below does this in the
-   composition pass; apply the same filter to the restart script).
+   dir substring and drop it from every glob (both scripts below do this, and so
+   does the script in `references/corrections.md`).
 
 2. **Re-ground and date the evidence before reporting a defect.** A raw `grep`
    count over transcripts is not an event count — it sweeps subagent quotes and
@@ -63,6 +59,14 @@ artefact as a finding. Guard against all three before trusting a number:
    would have quadrupled the window's session count. Count a transcript as a
    session only if it has an assistant turn; report the eval run itself once,
    by its parent session.
+
+4. **Window by event time, not file time.** A transcript file's modification
+   time is not the time of its events. On 2026-10-30 a 14-day window selected
+   2,638 files by modification time, but only 207 had an assistant turn inside
+   the window, and 10,913 of 14,037 human-attention spans in those files were
+   older than the window. Use modification time only as a pre-filter, then drop
+   each event whose `timestamp` is before the window. The scripts here and in
+   `references/corrections.md` do both.
 
 ## Inputs
 
@@ -137,13 +141,26 @@ Plain `python3`, stdlib only. Edit the glob and window.
 
 ```python
 import json, os, glob, time, collections, hashlib, re
+from datetime import datetime
 
 DAYS = 7
+START = time.time() - DAYS*86400
 REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)  # adjust marker per host
 SELF = ''  # this retro's own project-dir substring, e.g. '-Users-you-dev-skills'; its distil
            # fleet runs NOW and floats to the top of dup-read/oversize/tool-output if left in.
+
+def via_sdk(f):  # an application, not a person, may write the prompts; see corrections.md
+    for line in open(f, errors='ignore'):
+        if '"entrypoint"' in line:
+            try: return json.loads(line).get('entrypoint', '').startswith('sdk')
+            except: pass
+    return False
+
 files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-         if time.time() - os.path.getmtime(f) < DAYS*86400 and (not SELF or SELF not in f)]
+         if os.path.getmtime(f) > START and (not SELF or SELF not in f) and not via_sdk(f)]
+
+def stamp(o):
+    return datetime.fromisoformat(o['timestamp'].replace('Z', '+00:00')).timestamp()
 
 def blocks(c):
     return c if isinstance(c, list) else ([{'type':'text','text':c}] if isinstance(c, str) else [])
@@ -152,12 +169,16 @@ cat = collections.Counter()        # category -> chars
 tool_out = collections.Counter()   # tool name -> tool_result chars
 err = dup = oversize = img_n = 0
 hook_hash = collections.Counter(); hook_size = {}
+active = set()                     # files with an event inside the window
 
 for f in files:
     id2name = {}; id2path = {}; seen_paths = set()
     for line in open(f, errors='ignore'):
         try: o = json.loads(line)
         except: continue
+        if 'timestamp' in o:
+            if stamp(o) < START: continue  # mtime is not the window (trap 4)
+            active.add(f)
         t = o.get('type')
         if t == 'attachment':
             s = json.dumps(o.get('attachment', {}))
@@ -206,7 +227,7 @@ for f in files:
 
 tok = lambda c: c // 4
 tot = sum(cat.values())
-print(f"files={len(files)} total~tok={tok(tot):,}\n")
+print(f"files={len(active)} total~tok={tok(tot):,}\n")
 for k, v in cat.most_common():
     print(f"{k:18}{tok(v):>10,}  {100*v/tot:5.1f}%")
 print("\noutput by tool (top):")
@@ -232,7 +253,8 @@ high figure as a pointer to investigate, not a verdict.
 ## Restart detection
 
 A session the user abandoned and re-prompted fresh is the most expensive
-failure shape — the whole abandoned transcript is the cost — and per-transcript
+failure shape — the user discarded the whole session, which makes it the
+strongest correction — and per-transcript
 DISTIL cannot see it: an abandoned session just looks like one that ended. This
 is a cross-transcript pass.
 
@@ -242,18 +264,34 @@ the previous session's unfinished task, are restart candidates:
 
 ```python
 import json, os, glob, time
+from datetime import datetime
 
 DAYS = 7
-files = sorted((f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-                if time.time() - os.path.getmtime(f) < DAYS*86400), key=os.path.getmtime)
+START = time.time() - DAYS*86400
+SELF = ''  # this retro's own project-dir substring (trap 1)
+
+def via_sdk(f):  # an application, not a person, may write the prompts; see corrections.md
+    for line in open(f, errors='ignore'):
+        if '"entrypoint"' in line:
+            try: return json.loads(line).get('entrypoint', '').startswith('sdk')
+            except: pass
+    return False
+
+files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
+         if '/subagents/' not in f  # a subagent transcript cannot be a restart
+         and os.path.getmtime(f) > START and (not SELF or SELF not in f) and not via_sdk(f)]
+
+def stamp(o):
+    return datetime.fromisoformat(o['timestamp'].replace('Z', '+00:00')).timestamp()
 
 def texts(o):
     c = o.get('message', {}).get('content', [])
     c = c if isinstance(c, list) else [{'type': 'text', 'text': c}]
     return [b.get('text', '') for b in c if b.get('type') == 'text' and b.get('text', '').strip()]
 
+rows = []
 for f in files:
-    first = last = ''
+    first = last = ''; end = 0
     for line in open(f, errors='ignore'):
         try: o = json.loads(line)
         except: continue
@@ -261,44 +299,24 @@ for f in files:
         for t in texts(o):
             t = ' '.join(t.split())[:110]
             if not first and o['type'] == 'user' and not t.startswith('<'): first = t
-            last = f"[{o['type']}] {t}"
-    print(f"{time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(f)))}  {os.path.basename(os.path.dirname(f))[:36]}")
+            last = f"[{o['type']}] {t}"; end = stamp(o) if 'timestamp' in o else end
+    if end > START:  # the session ended in the window; mtime is not the window (trap 4)
+        rows.append((end, f, first, last))
+
+for end, f, first, last in sorted(rows):
+    print(f"{time.strftime('%m-%d %H:%M', time.localtime(end))}  {os.path.basename(os.path.dirname(f))[:36]}")
     print(f"   first: {first}\n   last:  {last}")
 ```
 
 Confirming a candidate is judgement, not script: read the abandoned session's
 tail. A last event that is an error, an unanswered question, or mid-task tool
 output (rather than a wrap-up) confirms abandonment. The failure to fix is
-whatever caused the abandonment — find it in the tail, cost it at the full
-abandoned transcript, and route it through SORT like any other finding. A
-session that ends cleanly and is followed by related new work is continuation,
-not a restart — don't count it.
-
-## Cost per failure (manual — not scripted)
-
-The script above attributes *context* tokens to *tools*. It cannot attribute
-*wasted* tokens to *failures*, and you should not extend it to try. Deciding
-which calls belong to a given failure — from its first wrong turn to its
-resolution — is the same judgement as isolating the failure in the first place
-(DISTIL), and it does not separate mechanically from interleaved work: a
-session rarely does one thing at a time, so "calls spent on this failure" is a
-read, not a count. A script that claims it will produce confident nonsense.
-
-Do it by hand over the DISTIL notes. For each isolated failure, an approximate
-cost is fine: count the tool calls (and roughly their tokens, `chars/4`) between
-the first wrong turn and the point the model recovered. Flag it as approximate;
-do not present it as attribution the interleaving won't support. The number only
-needs to be good enough to separate an expensive misdirection (e.g. ten calls
-down a false hypothesis) from a cosmetic self-correction (one call, immediately
-fixed) — that ranking is the point, not the precise figure.
-
-This is what makes the retro headline cost-weighted: one expensive failure can
-outweigh a tail of papercuts, and a count-based ratio would hide that. One
-exception: wrong-outcome mistakes keep finding status regardless of cost —
-cost ranks them, it does not gate them.
+whatever caused the abandonment — find it in the tail, rank it as the
+strongest correction, and route it through SORT like any other finding. A session that ends cleanly and is followed by related new work is
+continuation, not a restart — don't count it.
 
 ## Output
 
 Feed the numbers into the retro's normal PROPOSE shape. One line per finding:
-the token cost, the source, the concrete edit. Don't report a category total
-without naming what to change.
+the corrected failure that it explains, the token cost, the source, the
+concrete edit. Don't report a category total without naming what to change.

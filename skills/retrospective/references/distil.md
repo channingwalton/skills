@@ -76,12 +76,30 @@ For each isolated failure, capture:
     Compaction dropped load-bearing signal — a finding, call it out.
   - `cant-tell` — cannot determine (compaction boundary; or info isn't
     tool-surfaceable). Abstain rather than force a label.
-- **cost**: wasted calls and/or wasted wall-clock attributable to the failure.
-  This is the weight that matters — a cosmetic self-correction and a ten-call
-  misdirection are not equal units.
+- **corrections**: the user turns that corrected the agent because of this
+  failure, each quoted verbatim. This is the weight that matters, because the
+  user's attention is the bottleneck. Tag each with one class:
+  - `rejected-change` — the user read a change and rejected it;
+  - `rework` — earlier work came back to the user;
+  - `decision-twice` — the user restated a decision already made in standing
+    guidance, a skill, or an earlier turn;
+  - `redirect` — the user turned the agent off a wrong path;
+  - `interrupt` — the user stopped the agent mid-work;
+  - `declined-call` — the user declined a tool call.
+
+  A new request, a refinement the agent could not have known, or an answer to
+  the agent's own question is not a correction. Tag a turn `ambiguous` when you
+  cannot tell; a high ambiguous rate is a finding. A failure that the agent
+  recovered from without the user has zero corrections, however many calls it
+  took. Also quote each decision the user states: a decision that recurs across
+  sessions is a decision made twice, and only the retro's cross-session pass
+  can see it.
+- **agent cost**: wasted calls and tokens (`chars / 4`). The second weight: it
+  ranks failures with equal corrections — a cosmetic self-correction and a
+  ten-call misdirection are not equal units — and it points at the cause.
 - **outcome severity, independent of cost**: did the mistake produce a wrong
   outcome — a wrong answer accepted, a premature "done", a bad edit left in
-  place? A token-cheap mistake with a wrong outcome is a high-severity finding;
+  place? A cheap mistake with a wrong outcome is a high-severity finding;
   cost ranks findings, it does not gate them.
 - the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
   see the architectural issue", "the test didn't actually run"). These are the

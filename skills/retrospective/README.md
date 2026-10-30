@@ -1,10 +1,11 @@
 # retrospective
 
 A cross-session improvement loop for harness configuration: reduce **mistakes,
-wasted tokens, and restarts** in future sessions by improving the skills and
-config they run under. Distils several session transcripts into structured
-notes, measures **token-weighted wasted effort**, proposes config edits placed
-at the **cheapest-to-run actuator** that prevents each failure, and **verifies**
+wasted human attention, and restarts** in future sessions by improving the
+skills and config they run under. Distils several session transcripts into
+structured notes, measures **how often you had to correct the agent** and
+**accepted changes per human hour**, proposes config edits placed at the **cheapest-to-run actuator**
+that prevents each failure, and **verifies**
 that prior retros' edits actually reduced the cost they targeted before
 proposing more.
 
@@ -17,13 +18,14 @@ distribution.
 
 See [`SKILL.md`](./SKILL.md) for the process, actuator ordering, sort table,
 output shape, and red flags. Per-step detail is progressively disclosed — each
-file is read at its step, and on a given run two of the four often are not opened
+file is read at its step, and on a given run two of the five often are not opened
 at all:
 
 | File | Read at |
 |---|---|
 | [`references/distil.md`](./references/distil.md) | DISTIL — failure isolation, availability tags, capture list. Self-contained, so it can be handed to a distil subagent on its own. |
-| [`references/context-audit.md`](./references/context-audit.md) | MEASURE — context-audit script, noise heuristics, manual cost-per-failure method, restart detection. |
+| [`references/corrections.md`](./references/corrections.md) | MEASURE — what counts as a correction, human hours, accepted changes, the corrections script, manual cost-per-failure method. |
+| [`references/context-audit.md`](./references/context-audit.md) | MEASURE — context-audit script, noise heuristics, restart detection. |
 | [`references/verify.md`](./references/verify.md) | VERIFY — excitation, presence, replay, cost and trend checks. Skipped entirely on a first run. |
 | [`references/ledger.md`](./references/ledger.md) | APPLY — the three ledger row formats. Needed only once the user approves. |
 
@@ -38,17 +40,22 @@ analysis is several sessions, not one.
 
 ## What it does differently from a plain retro
 
-- **Cost-weighted, not count-based.** One expensive misdirection outweighs a
-  tail of papercuts; the headline is wasted effort, not a failure count. Two
-  exceptions keep standing regardless of token cost: wrong-outcome mistakes and
-  abandoned-and-restarted sessions.
+- **Weighted by your corrections, not by tokens.** Your attention is the
+  bottleneck; agent tokens are cheap. The headline is how often you had to
+  correct the agent — changes you read and rejected, rework that came back to
+  you, decisions you made twice, redirects, interrupts — so one failure you
+  corrected four times outweighs a tail of papercuts the agent fixed alone.
+  Questions the agent puts to you are a guard, so an edit cannot hide
+  corrections as questions. Wrong-outcome mistakes keep standing regardless of
+  cost. Tokens stay as a diagnosis: they explain truncation, compaction and
+  session limits. Throughput is accepted changes per human hour.
 - **Restart-aware.** A session you abandoned and re-prompted fresh is the most
   expensive failure shape, and per-session analysis can't see it; an aggregate
   pass looks for re-attempted tasks across transcripts.
 - **Actuator placement.** Each fix goes to the lowest-costing actuator that
   prevents it (a gate that costs nothing until it fires beats a CLAUDE.md line
-  that taxes every session). It resists answering failures with more standing
-  context.
+  that taxes every session, and a gate that blocks beats one that asks you). It
+  resists answering failures with more standing context.
 - **Closed loop.** It keeps a small ledger of the edits it applies and checks,
   next time, whether each edit stuck and whether the failure it targeted got
   cheaper — so corrections are verified, not assumed. The ledger also gets one
@@ -107,7 +114,8 @@ The retro prints inline. It writes only two things to disk:
    at CONFIRM, or reverted at VERIFY as ineffective or refuted by replay — with
    the reason, which PROPOSE reads next time so it does not re-raise a settled
    decision. Plus one summary row per retro run —
-   window headline (wasted tokens, restarts, wrong-outcome mistakes) and edit
+   window headline (correction rate, question rate, accepted changes per
+   human hour, wasted tokens, restarts, wrong-outcome mistakes) and edit
    hit-rate to date — which the next retro reads as a trend check on the retro
    itself. It must persist across sessions and live
    somewhere read only at retro time — never injected into a working session's
@@ -129,5 +137,5 @@ agent's own in-session "that was wrong" recognitions are harvested the same way.
 
 Session transcripts (the input) live in different places per agent and host —
 the skill asks where they are if the location isn't obvious. If they aren't
-available as raw JSONL, the MEASURE step's context-audit script is skipped (the
-rest still runs).
+available as raw JSONL, the MEASURE step's scripts are skipped (the rest still
+runs).
