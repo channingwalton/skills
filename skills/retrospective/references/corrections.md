@@ -20,7 +20,7 @@ two MEASURE outputs:
 2. **Throughput** — the script counts accepted changes and divides them by
    human hours.
 
-Before you trust a number, apply the four traps in
+Before you trust a number, apply the five traps in
 `references/context-audit.md`. The script excludes the retro's own run,
 prompt-only transcripts and SDK sessions, and it filters events by timestamp.
 

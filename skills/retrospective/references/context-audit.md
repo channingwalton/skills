@@ -2,7 +2,7 @@
 
 ## Contents
 
-- Four traps the retro's own MEASURE keeps hitting
+- Five traps the retro's own MEASURE keeps hitting
 - Inputs
 - What to compute
 - Trace to source — the point of the step
@@ -30,10 +30,10 @@ Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 a real habit. The script below counts them separately; never fold an image back into a char
 total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
 
-## Four traps the retro's own MEASURE keeps hitting
+## Five traps the retro's own MEASURE keeps hitting
 
 Each has fired at least once — the MEASURE step reporting a measurement
-artefact as a finding. Guard against all four before trusting a number:
+artefact as a finding. Guard against all five before trusting a number:
 
 1. **Exclude the retro's own run.** The distil fleet runs *during* MEASURE, so its
    subagent transcripts fall inside the mtime window and dominate the noise
@@ -67,6 +67,13 @@ artefact as a finding. Guard against all four before trusting a number:
    older than the window. Use modification time only as a pre-filter, then drop
    each event whose `timestamp` is before the window. The scripts here and in
    `references/corrections.md` do both.
+
+5. **Drop attachments that only the transcript keeps.** Some attachments are
+   records, not context: `prompt_snapshot` stores the system prompt and tool
+   definitions, and `hook_success` stores each hook's command line and exit
+   code. On 2026-10-30 they were 6.7M of the window's 9.7M attachment tokens,
+   which read as attachment bloat. The script below skips the types in
+   `RECORD_ONLY`; check a new large attachment type's fields before you count it.
 
 ## Inputs
 
@@ -146,6 +153,7 @@ from datetime import datetime
 DAYS = 7
 START = time.time() - DAYS*86400
 REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)  # adjust marker per host
+RECORD_ONLY = {'prompt_snapshot', 'hook_success'}  # stored in the transcript, never sent (trap 5)
 SELF = ''  # this retro's own project-dir substring, e.g. '-Users-you-dev-skills'; its distil
            # fleet runs NOW and floats to the top of dup-read/oversize/tool-output if left in.
 
@@ -181,6 +189,7 @@ for f in files:
             active.add(f)
         t = o.get('type')
         if t == 'attachment':
+            if o.get('attachment', {}).get('type') in RECORD_ONLY: continue  # trap 5
             s = json.dumps(o.get('attachment', {}))
             h = hashlib.md5(s.encode()).hexdigest()
             hook_hash[h] += 1; hook_size[h] = len(s)
