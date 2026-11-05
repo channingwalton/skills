@@ -30,17 +30,18 @@ Pick a **ready node**: one that isn't done and whose prerequisites are all done.
 
 **Experiment.** Make that node's change directly, the naive way. If the node adds behaviour rather than reshaping code, write a test for that behaviour first and see it fail. Build, then run the tests (a targeted subset when the full suite is slow).
 
-Inside an experiment, finish the node's own follow-through: a rename includes its call sites. For each break, ask: *could this be changed first, on its own, leaving the build green?* If yes, it is a **prerequisite**. If no, it belongs to this node; fix it within the experiment. When follow-through starts reaching outside the node, it is snowballing. Stop and record.
+Inside an experiment, finish the node's own follow-through: a rename includes its call sites. For each break, ask: *could this be changed first, on its own, leaving the build green?* If yes, it is a **prerequisite** and becomes a new node. If no, it belongs to this node; fix it within the experiment. Keep the node's label fixed during its experiment, so that a prerequisite cannot become part of the node. When follow-through starts reaching outside the node, it is snowballing. Stop and record.
 
 **Green: complete the leaf.**
 
 1. Run the project's canonical verification command. If it fails, the node is red: record those breaks as below.
-2. Mark the node `:::done`, add a log line, and commit code and graph together as `mikado: <node label>`.
+2. Confirm that every node this node points to is done. If one is not, an edge is wrong: correct the graph and log the correction.
+3. Mark the node `:::done`, add a log line, and commit code and graph together as `mikado: <node label>`.
 
 **Red: revert, then record.** Revert first, so that the graph commit runs on a clean tree and passes any pre-commit hook. The breaks stay in your context.
 
 1. Revert: `git reset --hard HEAD && git clean -fd`, then confirm `git status --porcelain` is empty. If the experiment changed dependencies, reinstall so the next run sees the committed set.
-2. Add each prerequisite as a node under the one you tried. Phrase it as the state that must hold ("`OrderService` receives `PaymentClient` by injection"), not as the symptom ("fix error at OrderService.ts:42"). If an existing node already says it, link to that node instead, because the graph is a DAG.
+2. Add each prerequisite as a node under the one you tried. A prerequisite comes only from a break in an experiment, not from a reading of the code. Phrase it as the state that must hold ("`OrderService` receives `PaymentClient` by injection"), not as the symptom ("fix error at OrderService.ts:42"). If an existing node already says it, link to that node instead, because the graph is a DAG.
 3. Add a log line: the node tried, what broke (file:line and the error, briefly), and the nodes added.
 4. Commit the graph: `git commit -m "mikado: <node id> needs <ids…>" -- docs/mikado/<slug>.md`.
 
@@ -56,11 +57,11 @@ You drive, but two things stop you and send the user the graph:
 ## Finish
 
 1. Review the whole branch against the base in the graph file (`<base>...HEAD`), and fix what the review finds. Commit the fixes as ordinary commits, not as graph nodes.
-2. Report the final graph (the Mermaid block), the commits, the verification run, any decisions you settled, and any stash you made. Mention that `docs/mikado/<slug>.md` is still on the branch in case the user wants it dropped before merging.
+2. Report the final graph (the Mermaid block, copied from the graph file), the commits, the verification run, any decisions you settled, and any stash you made. Mention that `docs/mikado/<slug>.md` is still on the branch in case the user wants it dropped before merging.
 
 ## Graph file
 
-The Mermaid block holds the structure and status. The log is the evidence trail: why each node exists. Edges run from a node to its prerequisites. Node IDs are stable once assigned. Each prerequisite label starts with its ID, so a log line or a commit message that cites an ID can be read against the rendered graph. Write each label in plain text, without backticks or double quotes: Mermaid fails on a backtick directly after the opening quote, and a double quote ends the label. Use backticks in the log instead. In a message to the user or a note outside the graph file, name a node by its label.
+The Mermaid block holds the structure and status. The log is the evidence trail: why each node exists. Edges run from a node to its prerequisites. Node IDs are stable once assigned: keep every ID, and never reuse one. To merge two nodes, keep one ID and log which ID merged into it. Each prerequisite label starts with its ID, so a log line or a commit message that cites an ID can be read against the rendered graph. Write each label in plain text, without backticks or double quotes: Mermaid fails on a backtick directly after the opening quote, and a double quote ends the label. Use backticks in the log instead. In a message to the user or a note outside the graph file, name a node by its label.
 
 ````markdown
 # Mikado: <goal>
