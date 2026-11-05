@@ -42,6 +42,9 @@ case "$case_id" in
   chatter-start)
     skill_file "skills/chatter/SKILL.md"
     ;;
+  mikado-pricing)
+    skill_file "skills/mikado/SKILL.md"
+    ;;
   *)
     printf 'case has no skill mapping: %s\n' "$case_id" >&2
     exit 2
@@ -49,11 +52,14 @@ case "$case_id" in
 esac
 
 printf '\n# User Task\n\n'
-if [ "$case_id" = "fix-loop-critical-only" ]; then
-  if [ -z "$fixture_root" ]; then
-    fixture_root="/path/to/copied/evals/fixtures/fix-loop-critical-only"
-  fi
-  sed "s#{fixture_root}#$fixture_root#g" "$case_file" | sed -n '1,260p'
-else
-  sed -n '1,260p' "$case_file"
-fi
+case "$case_id" in
+  fix-loop-critical-only|mikado-pricing)
+    if [ -z "$fixture_root" ]; then
+      fixture_root="/path/to/copied/evals/fixtures/$case_id"
+    fi
+    sed "s#{fixture_root}#$fixture_root#g" "$case_file" | sed -n '1,260p'
+    ;;
+  *)
+    sed -n '1,260p' "$case_file"
+    ;;
+esac

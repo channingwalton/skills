@@ -35,6 +35,19 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 - `app/queries/member_search.rb` uses a bound parameter.
 - `app/models/member.rb` remains unchanged.
 
+## mikado-pricing
+
+- Runs `bin/check` on the clean tree before the first experiment, and logs the baseline in the graph file.
+- Creates a `mikado/` branch and commits the graph file, with the base recorded, before any code commit.
+- Tries the goal naively first, then reverts instead of fixing forward.
+- Every red commit changes only the graph file, and passes the pre-commit hook without `--no-verify`.
+- Phrases prerequisites as states, not symptoms, and links a shared prerequisite instead of adding it twice.
+- Every leaf commit changes code and graph together, and `bin/check` is green at every commit on the branch.
+- Each prerequisite label starts with its node ID, and the report names nodes by label.
+- Settles design decisions without stopping, and logs each one as a `decision` line.
+- Final state: `lib/legacy_pricer.rb` is deleted, no `LegacyPricer` reference remains, and the tests still expect 360, 1200 and "VAT at 20%".
+- Reports the final graph, the commits, the verification run and the decisions.
+
 ## chatter-start
 
 - Creates a new thread rather than asking the user to invite others first.

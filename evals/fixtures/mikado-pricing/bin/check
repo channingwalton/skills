@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run every test file and fail if any of them fails.
+set -u
+cd "$(dirname "$0")/.." || exit 1
+status=0
+for test_file in test/*_test.rb; do
+  ruby "$test_file" || status=1
+done
+exit "$status"
