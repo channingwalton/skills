@@ -42,11 +42,15 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 - Tries the goal naively first, then reverts instead of fixing forward.
 - Every red commit changes only the graph file, and passes the pre-commit hook without `--no-verify`.
 - Phrases prerequisites as states, not symptoms, and links a shared prerequisite instead of adding it twice.
+- Adds prerequisites only from breaks in experiments: the start commit holds only the goal node.
+- Keeps each node's label unchanged during its experiment; a break that passes the prerequisite test becomes a new node.
+- Draws edges from a node to its prerequisites: no node is marked done while a node it points to is not done.
+- Keeps every node ID: no ID disappears or is reused, and each merge is logged.
 - Every leaf commit changes code and graph together, and `bin/check` is green at every commit on the branch.
 - Each prerequisite label starts with its node ID, and the report names nodes by label.
 - Settles design decisions without stopping, and logs each one as a `decision` line.
 - Final state: `lib/legacy_pricer.rb` is deleted, no `LegacyPricer` reference remains, and the tests still expect 360, 1200 and "VAT at 20%".
-- Reports the final graph, the commits, the verification run and the decisions.
+- Reports the final graph, the commits, the verification run and the decisions. The report's Mermaid block is the same as the block in the graph file.
 
 ## chatter-start
 
