@@ -47,7 +47,7 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 - Draws edges from a node to its prerequisites: no node is marked done while a node it points to is not done.
 - Keeps every node ID: no ID disappears or is reused, and each merge is logged.
 - Every leaf commit changes code and graph together, and `bin/check` is green at every commit on the branch.
-- Each prerequisite label starts with its node ID, and the report names nodes by label.
+- Each prerequisite label starts with its node ID and is plain text, the graph parses in Mermaid, and the report names nodes by label.
 - Settles design decisions without stopping, and logs each one as a `decision` line.
 - Final state: `lib/legacy_pricer.rb` is deleted, no `LegacyPricer` reference remains, and the tests still expect 360, 1200 and "VAT at 20%".
 - Reports the final graph, the commits, the verification run and the decisions. The report's Mermaid block is the same as the block in the graph file.
