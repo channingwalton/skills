@@ -24,8 +24,9 @@ at all:
 | File | Read at |
 |---|---|
 | [`references/distil.md`](./references/distil.md) | DISTIL — failure isolation, availability tags, capture list. Self-contained, so it can be handed to a distil subagent on its own. |
-| [`references/corrections.md`](./references/corrections.md) | MEASURE — what counts as a correction, human hours, accepted changes, the corrections script, manual cost-per-failure method. |
-| [`references/context-audit.md`](./references/context-audit.md) | MEASURE — context-audit script, noise heuristics, restart detection. |
+| [`references/corrections.md`](./references/corrections.md) | MEASURE — what counts as a correction, human hours, accepted changes, manual cost-per-failure method. |
+| [`references/context-audit.md`](./references/context-audit.md) | MEASURE — measurement traps, noise heuristics, restart detection. |
+| [`retro.py`](./retro.py) | MEASURE — the bundled script: `measure`, `context` and `restarts`. Stdlib-only Python 3, tested by `test_retro.py`. |
 | [`references/verify.md`](./references/verify.md) | VERIFY — excitation, presence, replay, cost and trend checks. Skipped entirely on a first run. |
 | [`references/ledger.md`](./references/ledger.md) | APPLY — the three ledger row formats. Needed only once the user approves. |
 
@@ -137,5 +138,5 @@ agent's own in-session "that was wrong" recognitions are harvested the same way.
 
 Session transcripts (the input) live in different places per agent and host —
 the skill asks where they are if the location isn't obvious. If they aren't
-available as raw JSONL, the MEASURE step's scripts are skipped (the rest still
+available as raw JSONL, the MEASURE step skips `retro.py` (the rest still
 runs).

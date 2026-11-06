@@ -89,12 +89,12 @@ subagent that file and its one transcript, and nothing else.
 
 ### 2. MEASURE
 
-One aggregate pass over the window, not per session. The scripts in
-`references/corrections.md` and `references/context-audit.md` read Claude
-Code's JSONL transcript schema. On another schema they report near-zero totals
-instead of an error, so check the caveat in `context-audit.md` first. When the
-transcripts are not raw JSONL, or a port costs more than it saves, cost the
-failures from the DISTIL notes alone.
+One aggregate pass over the window, not per session. Use the bundled
+`retro.py` beside this file (`measure`, `context` and `restarts`); never
+reimplement it. It reads Claude Code's JSONL transcript schema. On another
+schema it reports near-zero totals instead of an error, so check the caveat in
+`context-audit.md` first. When the transcripts are not raw JSONL, or a port
+costs more than it saves, cost the failures from the DISTIL notes alone.
 
 Five outputs:
 

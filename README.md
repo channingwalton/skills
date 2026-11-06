@@ -97,6 +97,9 @@ skills/
   retrospective/
     SKILL.md
     README.md
+    retro.py
+    test_retro.py
+    references/
   requirements-report/
     SKILL.md
     README.md

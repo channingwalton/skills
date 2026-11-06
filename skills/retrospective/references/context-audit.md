@@ -21,9 +21,8 @@ artefact as a finding. Guard against all five before trusting a number:
    subagent transcripts fall inside the mtime window and dominate the noise
    buckets — one run measured 585k `dup-read` tok and 526k `oversize` tok that
    were 73k and 84k once the fleet was excluded (8x and 6x inflation, each
-   pointing at a fabricated top-finding). Set `SELF` to the retro's own project
-   dir substring and drop it from every glob (both scripts below do this, and so
-   does the script in `references/corrections.md`).
+   pointing at a fabricated top-finding). Pass the retro's own project-dir
+   substring as `--self` to every `retro.py` command.
 
 2. **Re-ground and date the evidence before reporting a defect.** A raw `grep`
    count over transcripts is not an event count — it sweeps subagent quotes and
@@ -47,15 +46,14 @@ artefact as a finding. Guard against all five before trusting a number:
    2,638 files by modification time, but only 207 had an assistant turn inside
    the window, and 10,913 of 14,037 human-attention spans in those files were
    older than the window. Use modification time only as a pre-filter, then drop
-   each event whose `timestamp` is before the window. The scripts here and in
-   `references/corrections.md` do both.
+   each event whose `timestamp` is before the window. `retro.py` does both.
 
 5. **Drop attachments that only the transcript keeps.** Some attachments are
    records, not context: `prompt_snapshot` stores the system prompt and tool
    definitions, and `hook_success` stores each hook's command line and exit
    code. On 2026-10-30 they were 6.7M of the window's 9.7M attachment tokens,
-   which read as attachment bloat. The script below skips the types in
-   `RECORD_ONLY`; check a new large attachment type's fields before you count it.
+   which read as attachment bloat. `retro.py` skips the types in its
+   `RECORD_ONLY` set; check a new large attachment type's fields before you count it.
 
 ## Inputs
 
@@ -66,24 +64,23 @@ blocks: `text`, `thinking`, `tool_use` (has `name`, `input`, `id`),
 `tool_result` (has `content`, `tool_use_id`, `is_error`). Map `tool_use.id` →
 `name` to attribute each result to its tool.
 
-**The scripts below are written against Claude Code's transcript schema** (the
-glob, the event `type` values, the content-block shape above). Other hosts store
-sessions differently — Codex, for one, writes its own JSONL with a different
-event shape — so changing the glob is usually *not* enough. A schema mismatch
-does not raise: the scripts run happily and report near-zero, which reads as "no
-waste" when it means "parsed nothing". Before trusting any output, sanity-check
-that `total~tok` is the right order of magnitude for the window; if it isn't,
-port the block-extraction to your host's shape or skip MEASURE. If transcripts
+**`retro.py` reads Claude Code's transcript schema** (the glob, the event
+`type` values, the content-block shape above). Other hosts store sessions
+differently — Codex, for one, writes its own JSONL with a different event shape —
+so a new `--root` is usually *not* enough. A schema mismatch does not raise: the
+script runs happily and reports near-zero, which reads as "no waste" when it
+means "parsed nothing". Before trusting any output, sanity-check that
+`total~tok` is the right order of magnitude for the window; if it isn't, port
+the parsing in `retro.py` to your host's shape or skip MEASURE. If transcripts
 aren't JSONL at all, skip MEASURE.
 
 Format drift: hosts change what they store, so sanity-check two things before
 trusting the composition output. If `thinking` reads 0, the host likely strips
 thinking from stored transcripts — host behaviour, not zero thinking. And some
 hosts inject harness context inside *user* messages rather than as attachments
-(e.g. one host wraps it in `<system-reminder>` tags — the marker the script's
-`REMINDER` pattern matches by default); adjust the pattern to your host's
-marker, or `user_text` absorbs the injections and injection bloat is badly
-undercounted.
+(e.g. one host wraps it in `<system-reminder>` tags — the marker that
+`--reminder` matches by default); pass your host's marker as `--reminder`, or
+`user_text` absorbs the injections and injection bloat is badly undercounted.
 
 ## What to compute
 
@@ -126,108 +123,8 @@ context" row is the common landing spot.
 
 ## Script
 
-Plain `python3`, stdlib only. Edit the glob and window.
-
-```python
-import json, os, glob, time, collections, hashlib, re
-from datetime import datetime
-
-DAYS = 7
-START = time.time() - DAYS*86400
-REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)  # adjust marker per host
-RECORD_ONLY = {'prompt_snapshot', 'hook_success'}  # stored in the transcript, never sent (trap 5)
-SELF = ''  # this retro's own project-dir substring, e.g. '-Users-you-dev-skills'; its distil
-           # fleet runs NOW and floats to the top of dup-read/oversize/tool-output if left in.
-
-def via_sdk(f):  # an application, not a person, may write the prompts; see corrections.md
-    for line in open(f, errors='ignore'):
-        if '"entrypoint"' in line:
-            try: return json.loads(line).get('entrypoint', '').startswith('sdk')
-            except: pass
-    return False
-
-files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-         if os.path.getmtime(f) > START and (not SELF or SELF not in f) and not via_sdk(f)]
-
-def stamp(o):
-    return datetime.fromisoformat(o['timestamp'].replace('Z', '+00:00')).timestamp()
-
-def blocks(c):
-    return c if isinstance(c, list) else ([{'type':'text','text':c}] if isinstance(c, str) else [])
-
-cat = collections.Counter()        # category -> chars
-tool_out = collections.Counter()   # tool name -> tool_result chars
-err = dup = oversize = img_n = 0
-hook_hash = collections.Counter(); hook_size = {}
-active = set()                     # files with an event inside the window
-
-for f in files:
-    id2name = {}; id2path = {}; seen_paths = set()
-    for line in open(f, errors='ignore'):
-        try: o = json.loads(line)
-        except: continue
-        if 'timestamp' in o:
-            if stamp(o) < START: continue  # mtime is not the window (trap 4)
-            active.add(f)
-        t = o.get('type')
-        if t == 'attachment':
-            if o.get('attachment', {}).get('type') in RECORD_ONLY: continue  # trap 5
-            s = json.dumps(o.get('attachment', {}))
-            h = hashlib.md5(s.encode()).hexdigest()
-            hook_hash[h] += 1; hook_size[h] = len(s)
-            cat['hook/attachment'] += len(s); continue
-        if t not in ('user', 'assistant'): continue
-        for b in blocks(o.get('message', {}).get('content', [])):
-            bt = b.get('type'); role = o.get('message', {}).get('role', t)
-            if bt == 'text':
-                txt = b.get('text', '')
-                if role == 'assistant':
-                    cat['assistant_text'] += len(txt)
-                else:
-                    rem = sum(len(m) for m in REMINDER.findall(txt))
-                    cat['injected_reminder'] += rem
-                    cat['user_text'] += len(txt) - rem
-            elif bt == 'thinking':
-                cat['thinking'] += len(b.get('thinking', ''))
-            elif bt == 'tool_use':
-                id2name[b.get('id')] = b.get('name')
-                if b.get('name') == 'Read':
-                    i = b.get('input') or {}
-                    id2path[b.get('id')] = (i.get('file_path'), i.get('offset'), i.get('limit'))
-                cat['tool_use_input'] += len(json.dumps(b.get('input', {})))
-            elif bt == 'tool_result':
-                c = b.get('content', '')
-                if isinstance(c, str):
-                    s = c
-                else:
-                    # Split image blocks out before measuring; chars/4 overstates them ~30x.
-                    parts = c if isinstance(c, list) else [c]
-                    imgs = [x for x in parts if isinstance(x, dict) and x.get('type') == 'image']
-                    img_n += len(imgs)
-                    s = json.dumps([x for x in parts if x not in imgs])
-                cat['tool_result'] += len(s)
-                name = id2name.get(b.get('tool_use_id'), '?'); tool_out[name] += len(s)
-                if b.get('is_error'): err += len(s)
-                if len(s) > 40000: oversize += len(s)
-                p = id2path.get(b.get('tool_use_id'))
-                if p is not None:
-                    if p in seen_paths: dup += len(s)   # same slice Read again this session
-                    else: seen_paths.add(p)
-
-tok = lambda c: c // 4
-tot = sum(cat.values())
-print(f"files={len(active)} total~tok={tok(tot):,}\n")
-for k, v in cat.most_common():
-    print(f"{k:18}{tok(v):>10,}  {100*v/tot:5.1f}%")
-print("\noutput by tool (top):")
-for k, v in tool_out.most_common(12):
-    print(f"  {k:24}{tok(v):>9,}")
-dupe_boiler = sum(hook_size[h]*(n-1) for h, n in hook_hash.items() if n > 1)
-print(f"\nerrors~tok={tok(err):,}  dup-reads~tok={tok(dup):,}  oversize>40k~tok={tok(oversize):,}  repeated-boilerplate~tok={tok(dupe_boiler):,}")
-print(f"images={img_n} (~{img_n*1400:,} tok, excluded from the char counts above)")
-print("\nmost-repeated injected blocks:")
-for h, n in hook_hash.most_common(6):
-    if n > 1: print(f"  x{n:<4}{hook_size[h]:>7,}c each")
+```sh
+python3 <skill-dir>/retro.py context --days <window> --self <this retro's project-dir substring>
 ```
 
 The `dup-reads` figure counts the result chars of any `Read` of a slice already
@@ -244,55 +141,10 @@ high figure as a pointer to investigate, not a verdict.
 Per-transcript DISTIL cannot see a restart: an abandoned session looks like one
 that ended. This is a cross-transcript pass.
 
-The script lists each session's opening prompt and final event, in time order.
-Adjacent sessions with near-duplicate openings, or an opening that re-states
-the previous session's unfinished task, are restart candidates:
-
-```python
-import json, os, glob, time
-from datetime import datetime
-
-DAYS = 7
-START = time.time() - DAYS*86400
-SELF = ''  # this retro's own project-dir substring (trap 1)
-
-def via_sdk(f):  # an application, not a person, may write the prompts; see corrections.md
-    for line in open(f, errors='ignore'):
-        if '"entrypoint"' in line:
-            try: return json.loads(line).get('entrypoint', '').startswith('sdk')
-            except: pass
-    return False
-
-files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-         if '/subagents/' not in f  # a subagent transcript cannot be a restart
-         and os.path.getmtime(f) > START and (not SELF or SELF not in f) and not via_sdk(f)]
-
-def stamp(o):
-    return datetime.fromisoformat(o['timestamp'].replace('Z', '+00:00')).timestamp()
-
-def texts(o):
-    c = o.get('message', {}).get('content', [])
-    c = c if isinstance(c, list) else [{'type': 'text', 'text': c}]
-    return [b.get('text', '') for b in c if b.get('type') == 'text' and b.get('text', '').strip()]
-
-rows = []
-for f in files:
-    first = last = ''; end = 0
-    for line in open(f, errors='ignore'):
-        try: o = json.loads(line)
-        except: continue
-        if o.get('type') not in ('user', 'assistant'): continue
-        for t in texts(o):
-            t = ' '.join(t.split())[:110]
-            if not first and o['type'] == 'user' and not t.startswith('<'): first = t
-            last = f"[{o['type']}] {t}"; end = stamp(o) if 'timestamp' in o else end
-    if end > START:  # the session ended in the window; mtime is not the window (trap 4)
-        rows.append((end, f, first, last))
-
-for end, f, first, last in sorted(rows):
-    print(f"{time.strftime('%m-%d %H:%M', time.localtime(end))}  {os.path.basename(os.path.dirname(f))[:36]}")
-    print(f"   first: {first}\n   last:  {last}")
-```
+`retro.py restarts --days <window> --self <substring>` lists each session's
+opening prompt and final text, in time order, and leaves out subagent
+transcripts. Adjacent sessions with near-duplicate openings, or an opening that
+re-states the previous session's unfinished task, are restart candidates.
 
 Confirming a candidate is judgement, not script: read the abandoned session's
 tail. A last event that is an error, an unanswered question, or mid-task tool

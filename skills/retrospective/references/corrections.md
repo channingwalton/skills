@@ -1,6 +1,6 @@
 # Corrections and throughput (MEASURE step)
 
-The script below gives the window's human turns (the denominator of the
+`retro.py measure` (see Script below) gives the window's human turns (the denominator of the
 correction rate), its interrupts and declined tool calls, the agent's questions
 to the user (the guard), and accepted changes per human hour. The cost of each
 failure comes from the DISTIL notes, by hand (last section).
@@ -26,7 +26,7 @@ judgement. Read the ambiguous rate in the DISTIL notes with it.
 
 **Guard: questions to the user.** An edit that makes the agent ask before it
 acts can lower corrections and move the same cost into questions. The script
-counts calls to the tools in `ASK` per human turn. If an edit lowers
+counts calls to the tools named by `--ask` per human turn. If an edit lowers
 corrections and raises questions, it moved the cost; it did not remove it.
 Questions in plain text are not counted.
 
@@ -51,8 +51,8 @@ The script finds the repositories from the sessions' working directories and
 their `git -C` paths, then reads each default branch. It excludes:
 
 - a revert, and the commit that it reverts;
-- commits that a tool makes on a timer, such as a notes vault backup. Set
-  `AUTO` to their subject pattern. The per-repository output exists so that
+- commits that a tool makes on a timer, such as a notes vault backup. Pass
+  their subject pattern as `--auto`. The per-repository output exists so that
   you can find a new one.
 
 Commits that the user made outside any session count too, because the script
@@ -73,120 +73,16 @@ uses the SDK is excluded too — 115 human turns in 18 sessions in the same test
 
 ## Script
 
-Plain `python3`, stdlib only. Edit the window, `SELF`, `ASK` and `AUTO`.
+Run `retro.py measure` from the skill directory (Python 3, stdlib only):
 
-```python
-import json, os, glob, time, re, subprocess, collections
-from datetime import datetime
-
-DAYS = 14
-CAP = 10 * 60  # seconds; a longer reply gap is mostly time away. Human hours only.
-SELF = ''      # this retro's own project-dir substring; see context-audit.md, trap 1.
-REMINDER = re.compile(r'<system-reminder>.*?</system-reminder>', re.S)
-NOT_HUMAN = ('<local-command-', '<task-notification>', '<bash-stdout>', '<bash-stderr>',
-             '<bash-notification>', '[Usage limit', '[Earlier usage')
-GIT_C = re.compile(r'git\s+-C\s+(\S+)')
-ASK = ('AskUserQuestion',)  # tools that put a question to the user; adjust per host
-AUTO = re.compile(r'^vault backup:')  # subjects of commits that a tool makes on a timer; adjust per host
-
-def via_sdk(f):  # an application, not a person, may write the prompts; see "SDK sessions"
-    for line in open(f, errors='ignore'):
-        if '"entrypoint"' in line:
-            try: return json.loads(line).get('entrypoint', '').startswith('sdk')
-            except: pass
-    return False
-
-START = time.time() - DAYS * 86400
-files = [f for f in glob.glob(os.path.expanduser('~/.claude/projects/**/*.jsonl'), recursive=True)
-         if '/subagents/' not in f and os.path.getmtime(f) > START and (not SELF or SELF not in f)
-         and not via_sdk(f)]
-
-def stamp(o):
-    return datetime.fromisoformat(o['timestamp'].replace('Z', '+00:00')).timestamp()
-
-def blocks(c):
-    return c if isinstance(c, list) else [{'type': 'text', 'text': c}]
-
-spans = []                      # (start, end) of human attention, all sessions; for human hours
-per = {}                        # session -> Counter
-dirs = set()                    # every directory a session worked in
-for f in files:
-    s = collections.Counter(); last_out = None; uses = {}; agent = False
-    for line in open(f, errors='ignore'):
-        try: o = json.loads(line)
-        except: continue
-        t = o.get('type')
-        if t not in ('user', 'assistant') or o.get('isSidechain') or 'timestamp' not in o: continue
-        now = stamp(o)
-        if now < START: continue    # mtime is not the window: a file can hold months of events
-        dirs.add(o.get('cwd', ''))
-        bl = blocks(o.get('message', {}).get('content', []))
-        if t == 'assistant':
-            agent = True; last_out = now
-            for b in bl:
-                if b.get('type') == 'tool_use':
-                    uses[b.get('id')] = now
-                    s['asks'] += b.get('name') in ASK
-                    dirs.update(os.path.expanduser(d.strip('"\'')) for d in GIT_C.findall((b.get('input') or {}).get('command', '')))
-            continue
-        results = [b for b in bl if b.get('type') == 'tool_result']
-        for b in results:
-            use = uses.get(b.get('tool_use_id'))
-            text = '\n'.join(x.get('text', '') for x in blocks(b.get('content') or '') if isinstance(x, dict))
-            if text.startswith("The user doesn't want to proceed"):
-                s['declined'] += 1
-                if use: spans.append((max(use, now - CAP), now))
-        if results or o.get('isMeta') or o.get('isCompactSummary'): continue
-        if (o.get('origin') or {}).get('kind', 'human') != 'human': continue
-        text = REMINDER.sub('', ' '.join(b.get('text', '') for b in bl if b.get('type') == 'text')).strip()
-        if not text or text.startswith(NOT_HUMAN): continue
-        if text.startswith('[Request interrupted'):
-            s['interrupts'] += 1; continue
-        s['turns'] += 1
-        if last_out: spans.append((max(last_out, now - CAP), now))
-    if agent: per[f] = s        # a prompt-only transcript is not a session; see context-audit.md, trap 3.
-
-def union(spans):
-    total = 0; end = 0
-    for a, b in sorted(spans):
-        if b > end: total += b - max(a, end); end = b
-    return total
-
-def git(repo, *args):
-    return subprocess.run(['git', '-C', repo, *args], capture_output=True, text=True).stdout.strip()
-
-def accepted(repo):
-    """Commits that reached the default branch in the window, less reverts and what they reverted."""
-    base = git(repo, 'symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD')
-    base = base or next((b for b in ('main', 'master') if git(repo, 'rev-parse', '--verify', '--quiet', b)), 'HEAD')
-    log = [e.strip() for e in git(repo, 'log', base, '--since', f'@{int(START)}', '--format=%H %B%x00').split('\0')]
-    log = [e for e in log if e and not AUTO.match(e[41:])]
-    hashes = {e.split()[0] for e in log}
-    gone = {h for e in log for h in re.findall(r'This reverts commit ([0-9a-f]{40})', e)} & hashes
-    return len(hashes) - 2 * len(gone)
-
-repos = {}                      # the shared git dir -> one worktree, so worktrees count once
-for d in dirs:
-    if os.path.isabs(d) and os.path.isdir(d) and git(d, 'rev-parse', '--is-inside-work-tree') == 'true':
-        repos.setdefault(os.path.realpath(os.path.join(d, git(d, 'rev-parse', '--git-common-dir'))), d)
-
-hours = union(spans) / 3600
-per_repo = {os.path.dirname(k): accepted(d) for k, d in repos.items()}
-changes = sum(per_repo.values())
-tot = sum(per.values(), collections.Counter())
-turns = tot['turns'] or 1
-print(f"sessions={len(per)}  human turns={tot['turns']}  interrupts={tot['interrupts']}  "
-      f"declined={tot['declined']}  questions={tot['asks']} ({tot['asks'] / turns:.3f} per human turn)")
-print(f"human~hours={hours:.1f}  repos={len(repos)}  accepted changes={changes}  "
-      f"per human hour={changes / hours if hours else 0:.2f}")
-print("\naccepted changes by repo (check for a tool that commits on a timer):")
-for d, n in sorted(per_repo.items(), key=lambda kv: -kv[1]):
-    if n: print(f"  {n:4}  {d}")
-print("\nsessions by human turns (top):")
-for f, s in sorted(per.items(), key=lambda kv: -kv[1]['turns'])[:15]:
-    print(f"  turns={s['turns']:<4} int={s['interrupts']:<2} dec={s['declined']:<2} ask={s['asks']:<2} "
-          f"{os.path.basename(os.path.dirname(f))[-50:]}/{os.path.basename(f)[:8]}")
+```sh
+python3 <skill-dir>/retro.py measure --days <window> --self <this retro's project-dir substring>
 ```
+
+Other options: `--ask` names the tools that put a question to the user (default
+`AskUserQuestion`), `--auto` is the subject regex of timer commits (default
+`^vault backup:`), `--root` is the transcript root (default
+`~/.claude/projects`), and `--reminder` matches harness text in user messages.
 
 The human-turn filter matches Claude Code's markers for text that the harness
 writes into user messages: command output, task notifications, usage-limit
