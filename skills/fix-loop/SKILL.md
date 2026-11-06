@@ -1,6 +1,6 @@
 ---
 name: fix-loop
-description: Iterative review-fix cycle that runs the host's native code review, adds house checks, then repairs Critical issues until none remain, with baseline and regression control. Use when the user says "review and fix", "find and fix bugs", "clean up the code", "fix all issues", "review then fix", or otherwise asks to both find and repair problems.
+description: Iterative review-fix cycle that runs the host's native code review, adds house checks, then repairs Critical issues until none remain. Use when the user asks to both find and fix problems, such as "review and fix".
 ---
 
 # Fix Loop
@@ -34,7 +34,7 @@ Normalise findings before TRIAGE:
 Run these after the native review on every host; native reviewers miss them.
 
 - **Test gaps** - new behaviour without a test is Critical. Report untested edge cases.
-- **Landing surface** - open the surface the change lands on, not only the diff. A diff can be entirely correct and still ship a defect visible one file away. For a change that adds data to a handler, read that handler's authorisation guard (a worker-reachable endpoint leaked cross-worker data through three review passes). For a fix that matches or joins on an id, read the code that *writes* that id — a green disconfirmation run proves the test is load-bearing, not that the fixture is producible (a fix that matched nothing in production was committed, pushed, and defended to reviewers as intentional). For a change to a response payload or public contract, probe the generated artefact rather than reasoning about the source. For data added to any output (errors, logs, emails, API responses), name who can observe it — surfacing existing data to a new audience is an exposure.
+- **Landing surface** - open the surface the change lands on, not only the diff. A diff can be entirely correct and still ship a defect visible one file away. For a change that adds data to a handler, read that handler's authorisation guard (a worker-reachable endpoint leaked cross-worker data through three review passes). For a fix that matches or joins on an id, read the code that *writes* that id — a green disconfirmation run proves the test is load-bearing, not that the fixture is producible. For a change to a response payload or public contract, probe the generated artefact rather than reasoning about the source. For data added to any output (errors, logs, emails, API responses), name who can observe it — surfacing existing data to a new audience is an exposure.
 - **Changed strings and signatures** - search the whole repo for other usages and test assertions of the old values.
 - **First run** - a migration that can fail on existing production data is Critical unless the diff proves a safe backfill/default. For a change that re-enables a disabled path (CI trigger, feature flag, cron, scheduled job), check what it does on its first run in the first environment the merge reaches; read the CI branch triggers.
 - **Repro** - every Critical finding carries a failing test, REPL snippet, or trace with concrete input values. Without one, it is a Warning.
@@ -44,7 +44,7 @@ Run these after the native review on every host; native reviewers miss them.
 Use the supplied files/directories when present. With no explicit scope:
 
 1. uncommitted changes: `git diff --name-only` plus `git diff --name-only --staged`
-2. otherwise recent work: `git diff --name-only HEAD~3`. That revision does not exist in a repo with fewer than four commits — check `git rev-list --count HEAD` first, diff from the root commit when it is shorter, and with a single commit review the files it added (`git show --name-only --format= HEAD`)
+2. otherwise recent work: `git log -3 --name-only --format=`
 3. otherwise ask what to review
 
 ## Baseline
@@ -53,7 +53,7 @@ Before fixing, run the project's canonical verification command if discoverable 
 
 ## Loop
 
-Maximum 3 fix iterations, and the loop always ends on a review. After the third FIX and VERIFY, announce `Final review` and run REVIEW once more on the narrowed scope; report its Critical findings under Remaining Critical, unfixed. A fix no review has seen is never reported as reviewed: loops that stopped on a fix shipped their last round unreviewed in five sessions in one fortnight.
+Maximum 3 fix iterations, and the loop always ends on a review. After the third FIX and VERIFY, announce `Final review` and run REVIEW once more on the narrowed scope; report its Critical findings under Remaining Critical, unfixed. A fix no review has seen is never reported as reviewed: in one fortnight, five loops that stopped on a fix shipped their last round unreviewed.
 
 For each iteration:
 
@@ -61,25 +61,22 @@ For each iteration:
 2. TRIAGE - extract Critical findings:
    - A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it.
    - Every finding the reviewer raised goes in the report under exactly one heading, in the reviewer's words. A finding triaged only in your reasoning is a dropped finding.
-   - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, and findings a check ruled out (name the check). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals: such lists shipped known defects in a notarised release and a public repo.
-   - **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades have twice buried a shipping-blocker under cosmetic framing ("I filed this as a suggestion because I reasoned about the sample as documentation. I did not run the probe that would have shown it, and the probe took one command").
+   - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, and findings a check ruled out (name the check). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals; such lists shipped known defects in a notarised release and a public repo.
+   - **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades twice buried a shipping-blocker under cosmetic framing; each time, the probe took one command.
    - If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
-4. VERIFY - run the narrowest relevant tests plus the canonical command when practical. Compare with baseline.
+4. VERIFY - run the narrowest relevant tests, then the canonical command when practical. Compare with baseline.
 5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.
-
-Warnings and suggestions are reported, not auto-fixed.
 
 ## Fixer Contract
 
-Fix only Critical findings. Leave warnings and suggestions unactioned. Preserve user changes and avoid unrelated refactors.
+Fix only Critical findings. Report Warnings and Suggestions without fixing them. Preserve user changes and avoid unrelated refactors.
 
 For each finding:
 
 1. READ - inspect the finding, surrounding code, and relevant tests.
 2. FIX - apply the smallest change that resolves the finding.
 3. VERIFY - run the narrowest tests that prove the fix.
-4. TEST - run the project's canonical test command when practical.
 
 If a fix breaks tests:
 
