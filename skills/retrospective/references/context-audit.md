@@ -1,34 +1,16 @@
 # Context audit (MEASURE step)
 
-## Contents
-
-- Five traps the retro's own MEASURE keeps hitting
-- Inputs
-- What to compute
-- Trace to source — the point of the step
-- Script
-- Restart detection
-- Output
-
-This file covers two of the MEASURE outputs. Corrections and throughput are in
-`references/corrections.md`.
-
-1. **Context waste** (scriptable) — quantify where a window's context tokens
-   went, and trace the biggest noise to the skill / command / habit that
-   produced it. Aggregate across all transcripts in the window — a totals pass,
-   not a per-session note. Tokens are a diagnosis here, not the cost: a finding
-   earns an edit when it explains a failure that the user corrected.
-2. **Restarts** (script surfaces candidates, judgement confirms) — find
-   abandoned-and-re-attempted sessions across the window. See "Restart
-   detection" below.
+This file covers two MEASURE outputs: **context waste**, where the window's
+tokens went and what produced them; and **restarts**, where the script finds
+candidates and judgement confirms them.
 
 Token estimate: `chars / 4`. Good enough for attribution; don't chase exactness.
 
-**Except for images.** `chars/4` is wrong by ~30x on a base64 image block — a screenshot is
-~250k chars but costs roughly `(w x h)/750` ≈ 1.4k tokens. Left in, 11 screenshots read as
-470k phantom tokens and top the oversize ranking, which is a fabricated finding pointing at
-a real habit. The script below counts them separately; never fold an image back into a char
-total, and treat any "oversize dump" that turns out to be a Read of a `.png`/`.jpg` as ~1.4k.
+**Except for images.** `chars/4` overstates a base64 image ~30x: a screenshot is
+~250k chars but costs roughly `(w x h)/750` ≈ 1.4k tokens, and 11 screenshots
+once read as 470k phantom tokens at the top of the oversize ranking. The script
+counts images separately. Never fold an image back into a char total, and count
+an "oversize dump" that is a Read of a `.png`/`.jpg` as ~1.4k.
 
 ## Five traps the retro's own MEASURE keeps hitting
 
@@ -218,9 +200,7 @@ for f in files:
                 if isinstance(c, str):
                     s = c
                 else:
-                    # Split image blocks out before measuring. A base64 PNG is ~250k chars
-                    # but costs ~(w*h)/750 ≈ 1.4k tokens, so chars/4 overstates it ~30x and
-                    # floats screenshots to the top of the oversize ranking.
+                    # Split image blocks out before measuring; chars/4 overstates them ~30x.
                     parts = c if isinstance(c, list) else [c]
                     imgs = [x for x in parts if isinstance(x, dict) and x.get('type') == 'image']
                     img_n += len(imgs)
@@ -261,11 +241,8 @@ high figure as a pointer to investigate, not a verdict.
 
 ## Restart detection
 
-A session the user abandoned and re-prompted fresh is the most expensive
-failure shape — the user discarded the whole session, which makes it the
-strongest correction — and per-transcript
-DISTIL cannot see it: an abandoned session just looks like one that ended. This
-is a cross-transcript pass.
+Per-transcript DISTIL cannot see a restart: an abandoned session looks like one
+that ended. This is a cross-transcript pass.
 
 The script lists each session's opening prompt and final event, in time order.
 Adjacent sessions with near-duplicate openings, or an opening that re-states
@@ -319,10 +296,9 @@ for end, f, first, last in sorted(rows):
 
 Confirming a candidate is judgement, not script: read the abandoned session's
 tail. A last event that is an error, an unanswered question, or mid-task tool
-output (rather than a wrap-up) confirms abandonment. The failure to fix is
-whatever caused the abandonment — find it in the tail, rank it as the
-strongest correction, and route it through SORT like any other finding. A session that ends cleanly and is followed by related new work is
-continuation, not a restart — don't count it.
+output (rather than a wrap-up) confirms abandonment. Find the cause in the tail,
+and route it through SORT like any other finding. A session that ends cleanly
+and is followed by related new work is continuation, not a restart.
 
 ## Output
 

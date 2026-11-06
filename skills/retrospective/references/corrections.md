@@ -1,24 +1,9 @@
 # Corrections and throughput (MEASURE step)
 
-## Contents
-
-- Corrections
-- Human hours and throughput
-- SDK sessions
-- Script
-- Cost per failure (manual — not scripted)
-
-The user's attention is the **bottleneck**. Agent tokens are cheap and
-plentiful; the user's attention is not. The retro measures what failures take
-from it as **corrections**: user turns that correct the agent. This file covers
-two MEASURE outputs:
-
-1. **Corrections** — the headline. The cost of each failure comes from the
-   DISTIL notes, by hand. The script gives the window's human turns (the
-   denominator of the correction rate), its interrupts and declined tool calls,
-   and the agent's questions to the user (the guard).
-2. **Throughput** — the script counts accepted changes and divides them by
-   human hours.
+The script below gives the window's human turns (the denominator of the
+correction rate), its interrupts and declined tool calls, the agent's questions
+to the user (the guard), and accepted changes per human hour. The cost of each
+failure comes from the DISTIL notes, by hand (last section).
 
 Before you trust a number, apply the five traps in
 `references/context-audit.md`. The script excludes the retro's own run,
@@ -228,9 +213,3 @@ The agent cost in each note is the third weight. It ranks failures with equal
 corrections and class, and it points at the cause. Count it as the tool calls
 (and roughly their tokens, `chars/4`) between the first wrong turn and the
 point the model recovered.
-
-This is what makes the retro headline cost-weighted: one failure that the user
-corrected four times can outweigh a tail of papercuts that the agent fixed
-alone, and a count of failures would hide that. One exception: wrong-outcome
-mistakes keep finding status regardless of cost, because nobody corrected them
-inside the window.

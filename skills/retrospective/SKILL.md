@@ -1,13 +1,6 @@
 ---
 name: retrospective
-description: >-
-  Use on a fortnightly or post-milestone cadence, or when the user says
-  "retrospective" / "retro" / "what's been recurring" / "what did we learn" /
-  "review the last few sessions". Reads multiple session transcripts, distils
-  each, measures how often the user had to correct the agent (including
-  abandoned-and-restarted sessions) and accepted changes per human hour, and proposes targeted config edits — placed at the lowest standing-cost actuator that prevents the failure
-  — then verifies that prior retros' edits actually reduced the cost they
-  targeted. Not for single-session end-of-task review.
+description: Retrospective over several sessions — measure the user's corrections, check that earlier retro edits worked, and propose config edits at the lowest standing-cost actuator. Run fortnightly or after a milestone.
 disable-model-invocation: true
 ---
 
@@ -17,48 +10,36 @@ Run across several sessions, not one. The job is to reduce **mistakes, wasted
 human attention, and restarts** in future sessions by improving the skills and
 config they run under.
 
-The user's attention is the **bottleneck**. Agent tokens are cheap and
-plentiful; the user's attention is not. The headline metric is
-**corrections**: user turns that correct the agent — a change the user read
-and rejected, rework that returned to the user, a decision the user made
-twice, a redirect off a wrong path, an interrupt, a declined tool call. Report
-them as a rate: corrections per human turn. A restart is the strongest
-correction. A failure that the agent recovered from without the user has no
-corrections, costs only tokens, and ranks low. Wrong-outcome mistakes (a wrong
-answer accepted, a premature "done") keep finding status regardless of cost,
-because nobody corrected them inside the window. Throughput is **accepted
-changes per human hour**, and it is directional only.
+The user's attention is the **bottleneck**; agent tokens are cheap. The headline
+metric is **corrections**: user turns that correct the agent — a rejected
+change, rework, a decision made twice, a redirect, an interrupt, a declined tool
+call. Report them per human turn. A restart is the strongest correction. A
+failure that the agent recovered from alone has no corrections and ranks low. A
+**wrong outcome** (a wrong answer accepted, a premature "done") keeps finding
+status regardless of cost, because nobody corrected it inside the window.
 
-Corrections are a count, not a time: a time per correction adds a noisy weight
-to the same judgement. The agent's questions to the user are the guard
-measure, because an edit can lower corrections by turning them into questions.
-
-Tokens are a diagnosis, not the objective. Token waste reaches the bottleneck
-through truncation and compaction that remove what the agent needed, and
-through session limits that end a run; trace it when it explains a failure.
+Two more measures go beside it. The **guard** is questions to the user per human
+turn, because an edit can turn corrections into questions. **Throughput** is
+accepted changes per human hour, and it is directional only. Tokens are a
+diagnosis, not the objective: trace token waste when truncation, compaction or a
+session limit explains a failure.
 
 This is a closed control loop. Sessions are the only sensor. The actuators (the
-things you can change) are, ordered by **standing cost** — how much they cost to
-keep in place over many sessions, whether or not they ever fire. User turns
-rank first, tokens second:
+things you can change) are ordered by **standing cost** — how much they cost to
+keep in place over many sessions, whether or not they ever fire. User turns rank
+first, tokens second:
 
-| Actuator | User turns | Token cost | Prefer for |
-|----------|------------|------------|------------|
-| Gate / hook that blocks and tells the agent | None | Only when the guarded action fires | Failures preventable at the point of action |
-| Skill / command | None, unless the user must invoke it or answer it | Only when invoked | Failures needing context at a specific moment |
-| Agent / config / tool surface | None | Structurally, per session frame | Failures from topology, delegation, tool availability |
-| CLAUDE.md / AGENTS.md standing context | None | Every session, relevant or not | Last resort for tokens — always-on token tax |
-| Gate / hook that asks the user | One, every time it fires | Only when the guarded action fires | Decisions that need the user's judgement, and nothing else |
+| Actuator | User turns | Token cost |
+|----------|------------|------------|
+| Gate / hook that blocks and tells the agent | None | Only when the guarded action fires |
+| Skill / command | None, unless the user must invoke it or answer it | Only when invoked |
+| Agent / config / tool surface | None | Structurally, per session frame |
+| CLAUDE.md / AGENTS.md standing context | None | Every session, relevant or not |
+| Gate / hook that asks the user | One, every time it fires | Only when the guarded action fires |
 
-Two things are **not** actuators and must never be the proposed fix: the model
-itself (see `present-contradicted` below), and the task distribution.
-
-Every useful finding must produce an exact proposed edit or follow-up note,
-placed at the **lowest standing-cost actuator that can prevent it**. Single-session
-findings are noted but only escalated if high-severity.
-
-**Not for** single-session end-of-task review, mid-task check-ins, or routine
-status reports. The unit of analysis is *several sessions*, not one.
+The model itself and the task distribution are not actuators; never propose
+them as the fix. Every useful finding ends as an exact proposed edit or a
+follow-up note.
 
 ## Preconditions
 
@@ -66,193 +47,122 @@ status reports. The unit of analysis is *several sessions*, not one.
    not known, ask. If transcripts are unavailable, stop.
 2. The review window must be defined: last fortnight, last N sessions, since
    last retro, or a supplied file list. If unspecified, ask.
-3. The VERIFY ledger must be locatable: `$RETROSPECTIVE_LEDGER` if set,
-   otherwise ask the user (and suggest exporting it for future runs). It is a
-   small file the retro writes at APPLY and reads at the next retro, holding
-   applied edits, rejected proposals, and one summary row per run; it can
-   live anywhere durable across sessions. If the file does not exist yet, this
-   is the first run — VERIFY is skipped and the ledger is created at APPLY.
+3. Locate the ledger: `$RETROSPECTIVE_LEDGER` if set, otherwise ask the user
+   and suggest that they export the variable. It can live anywhere durable. If
+   the file does not exist, this is the first run: skip VERIFY, and create the
+   ledger at CONFIRM.
 
 ## The Process
 
+Read each reference at its step, not before.
+
 ```
-1. DISTIL   — For each transcript in the window, in isolation: read it, isolate
-              genuine failures (not normal iteration), write a structured note.
-              One transcript at a time; do not load them all together.
-2. MEASURE  — One aggregate pass: how many CORRECTIONS did each failure
-              cost, how many changes were ACCEPTED per human hour, which
-              sessions were abandoned and restarted, AND where did tokens go
-              (per-tool output, hook/injection bloat, unused dumps). See
-              `references/corrections.md` and `references/context-audit.md`.
-3. VERIFY   — Read the ledger. For each open prior edit: is it still IN FORCE,
-              was its failure mode EXERCISED this window (or can it be
-              REPLAYED), and did its cost FALL? Close the loop before proposing
-              anything new.
-4. AUDIT    — Recurring worked / recurring didn't, with note references.
-5. SORT     — Place each fix at the lowest standing-cost actuator that prevents it;
-              cap by recurrence, weight by corrections.
-6. PROPOSE  — Exact edits (before/after).
-7. CONFIRM  — Ask "apply these?" — do nothing without a yes.
-8. APPLY    — Edit canonical source, verify the loaded file changed, record the
-              edit in the ledger, recording its `after` text verbatim as the
-              presence anchor. Follow symlinks; never edit
-              versioned plugin/cache copies that will be overwritten.
+1. DISTIL   — one structured note per transcript, each read in isolation.
+              → references/distil.md
+2. MEASURE  — one aggregate pass: corrections, throughput, restarts, context
+              waste, redundancy.
+              → references/corrections.md; references/context-audit.md
+                when transcripts are raw JSONL
+3. VERIFY   — close the loop on prior edits before proposing anything new.
+              → references/verify.md, except on the first run
+4. AUDIT    — recurring worked / recurring didn't, with note references.
+5. SORT     — place each fix at the lowest standing-cost actuator that
+              prevents it.
+6. PROPOSE  — exact edits, before and after.
+7. CONFIRM  — write the report to the ledger, then ask "apply these?".
+8. APPLY    — edit the canonical source, then append the ledger rows.
+              → references/ledger.md
 ```
-
-### Step detail lives in `references/`
-
-Read each file at its step, not before. Two of the five are often not opened at
-all: VERIFY is skipped on a first run, and the ledger formats are needed only
-after the user approves.
-
-| File | Read it |
-|---|---|
-| `references/distil.md` | At DISTIL — and hand it to each distil subagent |
-| `references/corrections.md` | At MEASURE |
-| `references/context-audit.md` | At MEASURE, when transcripts are raw JSONL |
-| `references/verify.md` | At VERIFY, unless this is the first-ever run |
-| `references/ledger.md` | At APPLY, after the user says yes at CONFIRM |
 
 ### 1. DISTIL
 
-**Read `references/distil.md` before starting.** It holds the failure-isolation
-test, the in-window availability tags, and the per-failure capture list, and it
-is written to be self-contained — when fanning out, give each distil subagent
-that file plus its one transcript and nothing else.
+Read `references/distil.md` first. It is self-contained: give each distil
+subagent that file and its one transcript, and nothing else.
 
-Orchestration rules, needed here rather than in the reference:
-
-- One tmp working dir (`mktemp -d`), one transcript at a time, one structured
-  note each. Do not load them all together.
-- Reuse surviving notes from an earlier aborted run before distilling afresh.
-- Cap concurrent distil subagents at ~12, each with a namespaced scratch path.
-  A 40-agent fan-out exhausted the session limit mid-run and abandoned an entire
-  retro (~1.85M tokens), and shared scratch paths have caused agents to clobber
-  each other's extractions.
-
-Each note carries four fields the later steps sort on: an in-window
-availability tag (`present-not-consulted`, `present-contradicted`,
-`absent-via-truncation`, `absent-via-never-retrieved`, `absent-via-compaction`,
-`cant-tell`), its **corrections** with their classes, an **agent cost**, and
-an **outcome severity** independent of both.
+- Create one working directory with `mktemp -d`. Before you distil, reuse the
+  notes that an earlier aborted run left, and distil only what is missing.
+- Spawn at most ~12 distil subagents per retro session. The cap counts every
+  spawn, not only concurrent ones: on 2026-09-20 the 13th spawn failed after the
+  first 12 finished, and a 40-agent fan-out once ended a whole retro at the
+  session limit. Distil the remainder yourself, and state in the report how many
+  sessions the subagents examined and how many you examined.
 
 ### 2. MEASURE
 
-One aggregate pass over the raw transcript JSONL for the window — not per
-session. Five outputs:
+One aggregate pass over the window, not per session. The scripts in
+`references/corrections.md` and `references/context-audit.md` read Claude
+Code's JSONL transcript schema. On another schema they report near-zero totals
+instead of an error, so check the caveat in `context-audit.md` first. When the
+transcripts are not raw JSONL, or a port costs more than it saves, cost the
+failures from the DISTIL notes alone.
 
-1. **Corrections**: from the DISTIL notes, tally the corrections of each
-   isolated failure, with their classes; from the script in
-   `references/corrections.md`, take the window's human turns, interrupts,
-   declined tool calls and questions to the user. Report the correction rate
-   and the question rate, both per human turn. The retro's headline weighs
-   each failure by its corrections; it does **not count failures.** A
-   clean-looking percentage on a small sample of mostly-papercut failures is
-   the result to distrust — one failure that the user corrected four times can
-   outweigh the entire tail. One exception: wrong-outcome mistakes (flagged in
-   DISTIL) keep finding status regardless of cost.
-2. **Throughput**: accepted changes per human hour, from the same script. An
-   accepted change is a commit that reached the default branch in the window
-   and was not reverted. Directional only: task mix moves it more than any edit
-   does.
-3. **Restarts** (cross-transcript): scan the window for abandoned-and-re-attempted
-   work — near-duplicate opening prompts, the same task resumed in a fresh
-   session, sessions ending mid-task with no wrap-up. Per-transcript DISTIL
-   cannot see these: an abandoned session just looks like one that ended. A
-   restart is **the strongest correction** — the user discarded the whole
-   session — and it usually tops the ranking; read the abandoned session's tail
-   to find what caused the abandonment, and treat that as the failure to fix.
-4. **Context waste** — a diagnosis, not a cost: tool-result output by tool,
-   hook/injection bloat, content never used (errors, duplicate re-reads,
-   oversized dumps, boilerplate). Trace the biggest noise to its source — a
-   skill/command `!`-injection, a verbose command, a full-file read — so the
-   finding routes to a concrete edit. Propose that edit when the waste explains
-   a failure that the user corrected: truncation, compaction, or a session
-   limit that ended a run. Otherwise note it.
-5. **Redundancy inference**: combine context waste with the DISTIL notes. Flag
-   skill sections or installed surfaces that repeatedly cost tokens without an
-   observed behavioural delta, overlap another active skill, or duplicate
-   default model/harness behaviour. Do not delete or trim purely because a rule
-   was not used in this window; require either relevant excitation or clear
-   overlap evidence.
+Five outputs:
 
-`references/corrections.md` holds the corrections script and the manual
-cost-per-failure method; `references/context-audit.md` holds the context-waste
-script, the noise heuristics and restart detection. The scripts are written
-against Claude Code's transcript schema and fail silently (near-zero totals) on
-a host that stores a different shape — check the caveat in
-`references/context-audit.md` before trusting their numbers. When transcripts
-aren't available as raw JSONL, or porting the scripts to your host's schema
-costs more than they are worth, cost failures from the DISTIL notes alone and
-skip the scripts.
+1. **Corrections**: tally each failure's corrections from the DISTIL notes, and
+   take human turns, interrupts, declined calls and questions from the script.
+   Report the correction rate and the question rate per human turn. Weigh each
+   failure by its corrections, not by count: one failure that the user
+   corrected four times can outweigh the whole tail. Distrust a clean percentage
+   on a small sample of papercuts.
+2. **Throughput**: accepted changes per human hour, from the same script.
+3. **Restarts**: abandoned-and-re-attempted work across transcripts, which
+   DISTIL cannot see. Read the abandoned session's tail, and treat whatever
+   caused the abandonment as the failure.
+4. **Context waste**: where the tokens went, traced to the skill, command or
+   habit that produced them. Propose an edit only when the waste explains a
+   corrected failure; otherwise note it.
+5. **Redundancy**: skill sections or installed surfaces that cost tokens with no
+   observed behavioural change, overlap another active skill, or repeat default
+   behaviour. Require evidence that the rule's trigger occurred, or clear
+   overlap; one window with no use is not enough.
 
 ### 3. VERIFY
 
-**Skip this step, and `references/verify.md` with it, only on the first-ever run
-(no ledger yet).** Otherwise close the loop on prior corrections before proposing
-new ones: read the ledger, then work `references/verify.md` for each edit still
-marked open — the excitation check, the presence check, replay where the failure
-is replayable, the cost check, and the skill-level trend check.
-
-Two rules govern the rest, and they are what the step exists to enforce:
-
-- **Absence of a failure on an un-exercised mode is not evidence the edit
-  worked.** Mark it `untested-this-window` and conclude nothing.
-- **An edit that did not reduce its target's cost is revised or reverted, never
-  supplemented.** Stacking a second patch on a failed one is integrator windup.
-
-Each open edit ends the step with one verdict: `confirmed-by-replay`,
-`refuted-by-replay`, `confirmed-effective`, `ineffective`, or
-`untested-this-window`.
+Skip this step on the first run. Otherwise read the ledger, and work
+`references/verify.md` for each edit that is still open. Each open edit ends
+with one verdict: `confirmed-by-replay`, `refuted-by-replay`,
+`confirmed-effective`, `ineffective`, or `untested-this-window`.
 
 ### 4. AUDIT
 
 Read the notes back. Build **recurring worked** and **recurring didn't** lists,
-with note references per item. Do not escalate single-session findings unless
-high-severity. Fold MEASURE in: a token-heavy injection or dump is recurring if
-it spans multiple sessions, and a restart is automatically high-severity —
-whatever caused the abandonment gets recurring-level standing even from one
-instance. A user correction or decision that appears in two sessions is a
-**decision made twice**: recurring by definition, because the user paid for it
-twice. Fold VERIFY in: an `ineffective` prior edit is a recurring finding that
-needs a *different* actuator, not a louder same one.
+with note references per item. Escalate a single-session finding only when it is
+high-severity. These are recurring by definition:
 
-Note on generality: failures that are **harness/tooling-shaped** (tool loading,
-gating, polling, path handling) are general by construction — they do not depend
-on language or paradigm, so they need no cross-paradigm recurrence test to
-promote. Do not rely on a paradigm contrast to establish generality; your work
-mix may not provide comparable populations (e.g. implementation on one side,
-investigation-only on the other).
+- a token-heavy injection or dump that spans several sessions;
+- a restart, even from one instance, because it is high-severity;
+- a **decision made twice**: a user correction or decision that appears in two
+  sessions;
+- an `ineffective` prior edit.
+
+A **harness-shaped** failure (tool loading, gating, polling, path handling) is
+general by construction and needs no cross-paradigm recurrence test. A paradigm
+contrast does not establish generality, because the work mix seldom gives
+comparable populations.
 
 ### 5. SORT
 
-Place each fix at the **lowest standing-cost actuator that prevents it**
-(blocking gate < skill/command < structural < CLAUDE.md < asking gate). The
-instinct to add a CLAUDE.md rule, or a gate that asks the user, is reaching for
-an expensive actuator first — resist it.
+Place each fix at the **lowest standing-cost actuator that prevents it**. A new
+CLAUDE.md rule, or a gate that asks the user, is the expensive actuator; reach
+for it last.
 
-- A `present-not-consulted` failure is standing guidance that didn't get
-  consulted at the point of action. The fix is almost never *louder standing
-  guidance* (that feeds the blindness and taxes every session) — it is moving
-  the guidance to a gate or an on-demand skill that fires when the action is
-  imminent. Gated guidance fails cheap; wallpaper guidance fails expensive.
-- A `present-contradicted` failure is the floor. No actuator fixes it. Note it,
-  do not spend tokens on it.
-- Weight by cost, corrections first: the prevention must cost less, over
-  expected sessions, than the failure it prevents. A gate that asks the user
-  takes a user turn every time it fires; a gate that blocks and tells the agent
-  takes none. Do not add an always-on token tax (CLAUDE.md) to
-  prevent a papercut.
+- A `present-not-consulted` failure means that standing guidance did not reach
+  the point of action. Move the guidance to a gate or an on-demand skill that
+  fires when the action is imminent. Louder standing guidance feeds the
+  blindness and taxes every session.
+- A `present-contradicted` failure is the floor. No actuator fixes it; note it.
+- The prevention must cost less, over the expected sessions, than the failure
+  it prevents. Weigh corrections first, then tokens.
 - Consolidate `confirmed-effective` edits (merge and lock — integral reset).
-  Revise `ineffective` ones rather than supplementing.
-
-Use this table for destination:
+  Revise or revert an `ineffective` edit with a different actuator; never stack
+  a second patch on it (integrator windup).
 
 | Finding | Goes to |
 |---------|---------|
 | Preventable at the point of action | Blocking gate/hook in config |
 | Needs context at a specific moment | Skill/command edit (on-demand) |
 | Topology / delegation / tool availability | Agent, config, or tool-surface edit |
+| Needs the user's judgement, and nothing else | Gate/hook that asks the user |
 | Skill/command injects unused context | Skill/command edit: cap or scope the injection |
 | Skill/rule appears redundant after excitation or overlap check | Skill/command edit: trim, merge, demote to reference, or drop |
 | Discipline slipped (knew rule, skipped it) | Prefer a blocking gate; CLAUDE.md + Red Flags entry only if no gate is possible |
@@ -263,13 +173,11 @@ Use this table for destination:
 | Domain term | Definition in project documentation |
 | Multi-step recipe that worked and is reusable | Procedure candidate |
 
-Shared-skill portability: do not encode machine-local paths, private project
-names, private tools, or one user's personal workflow into a shared skill unless
-the user explicitly asks for a local fork. Put local/project-specific findings
-in repo guidance, project docs, issue comments, or follow-up notes.
-
-Rule of thumb: if a developer on another project would benefit, propose a skill
-edit. Otherwise use the smallest durable project/local destination.
+Keep shared skills portable: put machine-local paths, private project names,
+private tools and one user's workflow in repo guidance, project docs or notes,
+unless the user asks for a local fork. If a developer on another project would
+benefit, propose a skill edit; otherwise use the smallest durable local
+destination.
 
 ### 6. PROPOSE
 
@@ -285,74 +193,59 @@ Why this actuator, not a lower- or higher-standing-cost one: <one sentence>
 ```
 
 One rule per paragraph, one example max. Cap proposals at the top 3-5 by
-**cost-weighted** recurrence. Put the rest in "Noted but not actioned". An edit
-that cannot name the failure class it targets is not a controller action —
-demote it to a note.
+**cost-weighted** recurrence, and put the rest in "Noted but not actioned". An
+edit that cannot name the failure class it targets is a note, not a proposal.
 
-**Check the ledger's REJECTED rows before proposing.** If a proposal targets a
-failure class that already has a rejected row, either drop it or state in the
-proposal what is different this time — a new actuator, new evidence, a changed
-cost. Re-proposing the same edit for the same reason a retro later is churn, and
-it wastes the user's attention on a decision they already made.
+Check the ledger's REJECTED rows first. If a proposal targets a failure class
+with a rejected row, drop it, or state what is different this time: a new
+actuator, new evidence, or a changed cost. A repeated proposal spends the user's
+attention on a decision they already made.
 
 ### 7. CONFIRM
 
-**Before asking, write the report to the ledger as a `proposed, not applied`
-section.** An unanswered approval question must cost the run's *edits*, not the
-whole run: on 2026-07-22 a complete run — distil, measure, verify, four
-proposals — ended on a prose "Apply these?" that was never answered, and ~1.55M
-newly-processed tokens, 13 VERIFY verdicts and ~15 catalogued wrong outcomes
-were lost because nothing durable existed before APPLY.
+**Write the report to the ledger as a `proposed, not applied` section before you
+ask.** Then an unanswered question loses only the edits, not the run: on
+2026-07-22 a complete run was lost behind a prose "Apply these?" that nobody
+answered.
 
 Then present the report (Output Shape below) and ask with **AskUserQuestion, not
-prose** — that same run got a structured window-choice answered in 24 seconds
-and a prose approval answered never. Do nothing further without a yes. Note
-which proposals the user declines, and the reason if one is given; those become
-REJECTED rows at APPLY.
+prose**. Do nothing further without a yes. Record which proposals the user
+declines, and the reason if one is given; they become REJECTED rows at APPLY.
 
 ### 8. APPLY
 
-After CONFIRM only. Edit the canonical source, verify the loaded file changed,
-report the landed path. Flip the `proposed, not applied` section written at
-CONFIRM to its final state rather than appending a second copy.
+After CONFIRM only. Edit the canonical source, verify that the loaded file
+changed, and report the landed path. Follow symlinks; never edit versioned
+plugin or cache copies that an update will overwrite.
 
 A gate edit is not applied until its matcher has been replayed against the real
-in-window command forms, including forms the standing rules mandate (e.g.
-`git -C <path>`). All three gates from one retro had matcher defects that were
-found only after APPLY, and one never fired on the form CLAUDE.md requires.
+in-window command forms, including forms that the standing rules mandate (e.g.
+`git -C <path>`). All three gates from one retro had matcher defects that only
+showed after APPLY.
 
-Then read `references/ledger.md` and append three kinds of row to the ledger at
-the path resolved in Preconditions:
-
-- **one per applied edit**, carrying its `after` text verbatim — that is the
-  anchor VERIFY uses next retro to check the edit is still in force;
-- **one REJECTED row per proposal that did not land**, declined at CONFIRM or
-  reverted at VERIFY, so PROPOSE does not re-raise a settled decision;
-- **one SUMMARY row for the retro itself**, written every run even when zero
-  edits were approved, because VERIFY's trend check needs the headline
-  regardless.
+Then read `references/ledger.md`. Change the `proposed, not applied` section to
+its final state, and append one row per applied edit, one REJECTED row per
+proposal that did not land, and one SUMMARY row, even when the user approved
+nothing.
 
 ## Output Shape
 
-Printed inline. Nothing is written to disk except tmp intermediate notes and, at
-APPLY, the ledger.
+Printed inline, and written to the ledger as the `proposed, not applied` section
+at CONFIRM.
 
 ```
 ## Loop check (VERIFY)
-- <prior edit>: <confirmed-by-replay | refuted-by-replay | confirmed-effective |
-  ineffective | untested-this-window>
+- <prior edit>: <verdict>
   (<edit still present? replayed or observed? exercised this window? cost change?>)
 - Trend: <this window's headline vs prior SUMMARY rows; cumulative edit
   hit-rate> (directional only)
 
 ## Cost summary
-- Corrections this window, the correction rate per human turn, and the few
-  failures that caused most of them. (Weighted by corrections, not a count of
-  failures.)
+- Corrections, the correction rate per human turn, and the few failures that
+  caused most of them.
 - Questions to the user per human turn (the guard), against prior SUMMARY rows.
 - Throughput: accepted changes per human hour, against prior SUMMARY rows.
-- Restarts: abandoned-and-re-attempted sessions, with the cause of
-  abandonment.
+- Restarts, with the cause of each abandonment.
 - Wrong-outcome mistakes, listed regardless of cost.
 - Token waste that caused a failure above; the window's token total for the
   trend only.
@@ -363,14 +256,10 @@ APPLY, the ledger.
 ## Recurring — didn't work
 - <item with note references, cost-weighted>
 
-## Proposed edits   (top 3–5 by cost-weighted recurrence)
-1. File: <path>   Actuator: <…>   Targets: <failure class>
-   Change: <old → new>
-   Cost traded: <prevents X vs standing cost Y>
-   Why this actuator: <one sentence>
+## Proposed edits   (top 3–5, each in the PROPOSE format)
 
 ## Floor (not actionable)
-- <present-contradicted failures — info was available and ignored; no actuator fixes these>
+- <present-contradicted failures>
 
 ## Proposed follow-up notes
 - <destination or type>: <entry>
@@ -383,28 +272,22 @@ APPLY, the ledger.
 
 ## Noted but not actioned
 - <single-session, low-cost, or floor findings>
-
-Apply these?
 ```
-
-Nothing is written (beyond tmp notes) until the user approves.
 
 ## Red Flags
 
-The rules are in the steps above; these five are the ones that get violated while the
-step is being followed, so check them against the finished report:
+Check the finished report for these five. Each one happens while the step that
+forbids it is followed:
 
-- **Pure analysis** — a finding with no proposed edit or follow-up note, or an edit with no
-  file path and section. Generic advice ("test more", "plan better") is this failure wearing
-  a conclusion.
-- **Wrong actuator** — the fix sits higher in standing cost than the failure warrants. The
-  usual form is answering `present-not-consulted` with louder standing context, which feeds
-  the blindness *and* taxes every session. Another form turns corrections into questions to
-  the user: the correction rate falls and the question rate rises.
-- **Count over cost, cost over outcome** — a headline that weights a papercut equal to an
-  expensive misdirection, ranks high on tokens a failure that the user never corrected, or
-  drops a wrong-outcome mistake because it was cheap. Both dimensions rank; neither gates
-  the other.
-- **Absence read as evidence** — no recurrence proves nothing when the failure mode was
-  never exercised, a one-sided replay pass is not causal, and one window is not a trend.
+- **Pure analysis** — a finding with no proposed edit or note, or an edit with
+  no file path and section. Generic advice ("test more") is this failure.
+- **Wrong actuator** — the fix sits higher in standing cost than the failure
+  warrants: louder standing context for `present-not-consulted`, or corrections
+  turned into questions to the user.
+- **Count over cost, cost over outcome** — a papercut weighted equal to an
+  expensive misdirection, an uncorrected failure ranked high on tokens, or a
+  cheap wrong outcome dropped. Both dimensions rank; neither gates the other.
+- **Absence read as evidence** — no recurrence proves nothing when the failure
+  mode was never exercised, a one-sided replay is not causal, and one window is
+  not a trend.
 - **Premature application** — edits applied before the user says yes at CONFIRM.

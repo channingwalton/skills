@@ -1,21 +1,18 @@
 # The VERIFY ledger (APPLY step 8)
 
-Three row types, all appended at APPLY, all read at the next retro's VERIFY and
-PROPOSE steps. Write to the ledger path resolved in Preconditions.
+The ledger holds the `proposed, not applied` report section written at CONFIRM,
+and three row types appended at APPLY. The next retro reads the rows at VERIFY
+and PROPOSE.
 
 ## Applied-edit row
 
-One per applied edit:
+One per applied edit. The verbatim `after` text is VERIFY's presence anchor:
 
 ```
 date (shell `date`) | file+section | actuator | targets-failure-class |
-before→after (verbatim — VERIFY's presence anchor) | [optional: config-fingerprint] |
+before→after (verbatim) | [optional: config-fingerprint] |
 status: open
 ```
-
-Record the `after` text verbatim — VERIFY uses it as the presence anchor next
-retro (its presence check). The optional config fingerprint is the advisory
-whole-config hint described there.
 
 ## Rejected row
 
@@ -28,15 +25,14 @@ targets-failure-class | proposed after-text (abridged) |
 reason: <declined: … | ineffective | refuted-by-replay>
 ```
 
-This is the rejected-edit buffer. PROPOSE reads it to avoid re-raising a
-decision the user already made, and it keeps a record of which actuators have
-been tried against a failure class and failed — which is itself evidence when
-that class recurs.
+PROPOSE reads these rows so that it does not re-raise a settled decision. They
+also record which actuators already failed against a failure class, which is
+evidence when that class recurs.
 
 ## Summary row
 
-One per retro run — written every run after CONFIRM, even when zero edits were
-approved, because VERIFY's trend check needs the headline regardless:
+One per retro run, even when the user approved no edits, because VERIFY's trend
+check needs the headline:
 
 ```
 SUMMARY | date (shell `date`) | window: <N sessions / range> |
@@ -49,6 +45,6 @@ rejected to date: <n>
 
 ## Writing rule
 
-The ledger is read only at retro time — do **not** add a hook that writes
+Write the ledger only at retro time. Do **not** add a hook that writes
 observations on the fly; the transcript is already the complete on-the-fly
 record.

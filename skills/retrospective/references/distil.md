@@ -1,46 +1,17 @@
 # DISTIL (step 1)
 
-## Contents
+Read one transcript, isolate its genuine failures, and write one structured
+note. This file is all that a distil subagent needs.
 
-- Working directory and fan-out
-- Isolating genuine failures
-- What to capture per failure
-- Note file
-
-For each transcript in the window, in isolation: read it, isolate genuine
-failures (not normal iteration), write a structured note. One transcript at a
-time; do not load them all together.
-
-This file is self-contained. When the retro fans out to parallel distil
-subagents, give each subagent this file and the one transcript it is to distil —
-it needs nothing else from `SKILL.md`.
-
-## Working directory and fan-out
-
-Create a tmp working dir once (`mktemp -d`). For each transcript: read one,
-write one structured note, move on. When distilling via parallel subagents,
-require each to use namespaced scratch paths (e.g. `/tmp/<session-id>-skel.txt`,
-never a shared `/tmp/skel*.txt`) — concurrent agents have clobbered each
-other's extractions and nearly mis-attributed content across transcripts.
-
-Before distilling, look for surviving notes from an earlier aborted run (the tmp
-dirs persist) and reuse them — distil only what is missing.
-
-Cap distil subagents at ~12 **per retro session** — the limit is cumulative
-spawns, not concurrency. Panes/forks are not released when an agent finishes: on
-2026-09-20 the 13th spawn failed with `fork failed: Device not configured` even
-though all 12 earlier agents had already completed and returned, costing 8 lost
-spawns mid-run. Earlier, a 40-agent fan-out exhausted the session limit and
-abandoned an entire retro (~1.85M tokens, 12 of 40 notes never written), which
-cost more than every failure that retro was studying. Plan for ~12 subagent
-notes; distil any remainder yourself in-session, and state in the report how
-many sessions were examined each way.
+Use namespaced scratch paths (e.g. `/tmp/<session-id>-skel.txt`, never a shared
+`/tmp/skel*.txt`): concurrent distil agents have clobbered each other's
+extractions.
 
 ## Isolating genuine failures
 
-**Isolate genuine failures first — this is the judgement-heavy step.** A failure
-is output that took a wrong path, missed a constraint, or declared done
-prematurely. Exclude normal iteration:
+**This is the judgement-heavy step.** A failure is output that took a wrong
+path, missed a constraint, or declared done prematurely. Exclude normal
+iteration:
 
 - Expected red→green loops. A typechecker/compiler reporting a legitimate next
   constraint is the loop working, NOT a failure. Discriminator: did the error
@@ -56,8 +27,6 @@ If isolating a failure is itself ambiguous, say so. A high ambiguous rate is a
 finding: failures aren't cleanly separable from iteration in these transcripts.
 
 ## What to capture per failure
-
-For each isolated failure, capture:
 
 - what went wrong and what would have prevented it
 - **was the preventing information in-window at the failure turn?** Judge by the
@@ -77,8 +46,7 @@ For each isolated failure, capture:
   - `cant-tell` — cannot determine (compaction boundary; or info isn't
     tool-surfaceable). Abstain rather than force a label.
 - **corrections**: the user turns that corrected the agent because of this
-  failure, each quoted verbatim. This is the weight that matters, because the
-  user's attention is the bottleneck. Tag each with one class:
+  failure, each quoted verbatim. Tag each with one class:
   - `rejected-change` — the user read a change and rejected it;
   - `rework` — earlier work came back to the user;
   - `decision-twice` — the user restated a decision already made in standing
@@ -91,25 +59,21 @@ For each isolated failure, capture:
   the agent's own question is not a correction. Tag a turn `ambiguous` when you
   cannot tell; a high ambiguous rate is a finding. A failure that the agent
   recovered from without the user has zero corrections, however many calls it
-  took. Also quote each decision the user states: a decision that recurs across
-  sessions is a decision made twice, and only the retro's cross-session pass
-  can see it.
-- **agent cost**: wasted calls and tokens (`chars / 4`). The second weight: it
-  ranks failures with equal corrections — a cosmetic self-correction and a
-  ten-call misdirection are not equal units — and it points at the cause.
+  took. Also quote each decision the user states: only the retro's
+  cross-session pass can see a decision made twice.
+- **agent cost**: wasted calls and tokens (`chars / 4`). It ranks failures with
+  equal corrections — a cosmetic self-correction and a ten-call misdirection are
+  not equal units — and it points at the cause.
 - **outcome severity, independent of cost**: did the mistake produce a wrong
   outcome — a wrong answer accepted, a premature "done", a bad edit left in
-  place? A cheap mistake with a wrong outcome is a high-severity finding;
-  cost ranks findings, it does not gate them.
+  place? A cheap mistake with a wrong outcome is a high-severity finding.
 - the agent's own mid-session failure-recognitions, verbatim ("I made up…", "I
   see the architectural issue", "the test didn't actually run"). These are the
-  highest-value signal and they are already in the transcript — harvest them.
-  **Check whether `thinking` blocks actually carry content first.** Some hosts
-  store them empty or as one-line summaries (this one: 2,042 blocks, 0 chars, in
-  the 2026-09-20 window; 5,771 blocks averaging 31 chars in the 2026-10-21
-  window), so the model's private reasoning is unrecoverable and these
-  recognitions must come from assistant *text*. Say so in the note when thinking
-  is empty, and prefer `cant-tell` over `present-contradicted` wherever the
+  highest-value signal. **Check first whether `thinking` blocks carry content.**
+  Some hosts store them empty or as one-line summaries (Claude Code did in the
+  2026-09-20 and 2026-10-21 windows); then the recognitions must come from
+  assistant *text*. Say so in
+  the note, and prefer `cant-tell` over `present-contradicted` wherever the
   distinction between "engaged with and overrode" and "never registered" rests
   on reasoning you cannot see — that boundary decides what counts as the floor.
 - context waste: large tool outputs that went unused; note the producing tool,
