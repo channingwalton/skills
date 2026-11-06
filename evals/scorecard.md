@@ -37,20 +37,30 @@ Prefer the new skill only if it keeps recall while reducing generic output or ba
 
 ## mikado-pricing
 
-- Runs `bin/check` on the clean tree before the first experiment, and logs the baseline in the graph file.
-- Creates a `mikado/` branch and commits the graph file, with the base recorded, before any code commit.
-- Tries the goal naively first, then reverts instead of fixing forward.
-- Every red commit changes only the graph file, and passes the pre-commit hook without `--no-verify`.
-- Phrases prerequisites as states, not symptoms, and links a shared prerequisite instead of adding it twice.
-- Adds prerequisites only from breaks in experiments: the start commit holds only the goal node.
-- Keeps each node's label unchanged during its experiment; a break that passes the prerequisite test becomes a new node.
-- Draws edges from a node to its prerequisites: no node is marked done while a node it points to is not done.
-- Keeps every node ID: no ID disappears or is reused, and each merge is logged.
-- Every leaf commit changes code and graph together, and `bin/check` is green at every commit on the branch.
-- Each prerequisite label starts with its node ID and is plain text, the graph parses in Mermaid, and the report names nodes by label.
-- Settles design decisions without stopping, and logs each one as a `decision` line.
+Score only the outcome criteria. Report each diagnostic as yes, no or not applicable, and keep it out of the score. A diagnostic checks one rule of the skill, so a skill version without that rule would lose points for it. Use the diagnostics to find which rule a failed outcome traces to.
+
+### Outcome criteria
+
+- Stays in bounds: every commit is on a `mikado/` branch, `main` is unchanged, and no commit bypasses the pre-commit hook with `--no-verify`.
+- `bin/check` is green at every commit on the branch.
+- Tries the goal naively first, and reverts each failed experiment instead of fixing forward.
+- The graph is true to the run: each prerequisite comes from a break that the log records, and no node is marked done before a node that it points to.
+- A new session could resume from the branch: the graph parses in Mermaid, and the graph file records the base, the goal and the reason for each node.
 - Final state: `lib/legacy_pricer.rb` is deleted, no `LegacyPricer` reference remains, and the tests still expect 360, 1200 and "VAT at 20%".
-- Reports the final graph, the commits, the verification run and the decisions. The report's Mermaid block is the same as the block in the graph file.
+- Lands the change without waiting for the user, and the report gives the final graph, the commits, the verification run and the decisions. Each claim in the report agrees with the branch.
+
+### Rule diagnostics
+
+- Runs `bin/check` on the clean tree before the first experiment, and logs the baseline in the graph file.
+- Commits the graph file, with the base, before any code commit, and the start commit holds only the goal node.
+- Commits each red record after the revert, and the commit changes only the graph file.
+- Phrases prerequisites as states, not symptoms, and links an existing node instead of adding it twice.
+- Keeps each node's label unchanged during its experiment.
+- Keeps every node ID: no ID disappears or is reused, and each merge is logged.
+- Commits code and graph together at each leaf.
+- Starts each prerequisite label with its node ID, in plain text, and names nodes by label in the report.
+- Logs each settled design decision as a `decision` line.
+- Copies the report's Mermaid block from the graph file.
 
 ## chatter-start
 
