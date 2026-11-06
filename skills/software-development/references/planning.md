@@ -18,10 +18,6 @@
 - **Generated artefacts / codegen** — pin which command regenerates which file and whether it needs a live upstream service running. Regenerate by default; hand-edit generated output only when repo docs or user approval make that explicit.
 - **Presenting the questions** — define any issue-specific term inside the question itself; don't assume the user shares the ticket's framing. For an unfamiliar design space, ask one decision at a time and expect questions back; a batched multiple-choice form suits settled trade-offs, not exploration.
 
-## ✂️ SLICE — Break Into Tasks
-
-Slice by visible behaviour, not implementation layer.
-
 ## 🧪 FALSIFY — Test Your Understanding
 
 1. **State what you believe** — "We understand the feature to mean X"

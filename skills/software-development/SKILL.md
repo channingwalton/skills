@@ -15,8 +15,6 @@ The workflow is:
 4. 🔁 ITERATE - repeat until the agreed scope is done.
 5. ✅ COMPLETE - disconfirm the result.
 
-No task is done until the review step passes or an explicit low-risk exception is recorded.
-
 ## Related Skills
 
 - `fix-loop` - use for the DEVELOP review step. It runs the host's native code review and repairs Critical findings itself; its review covers the diff, so run no second review on it.
@@ -31,7 +29,7 @@ Sequence: DISCUSS -> CLARIFY -> SLICE -> FALSIFY -> CONFIRM. See [planning refer
 
 - DISCUSS: identify the real outcome and affected surface.
 - CLARIFY: restate hidden premises as "Given [premises], then [conclusion]" and challenge missing or obvious assumptions.
-- SLICE: create small vertical tasks ordered by dependency and value.
+- SLICE: create small vertical tasks, sliced by visible behaviour rather than by implementation layer, ordered by dependency and value.
 - FALSIFY: ask what scenario would prove the understanding wrong.
 - CONFIRM: present the ordered tasks and get agreement on the first task before coding.
 
@@ -50,7 +48,7 @@ Definition of Done, for every task:
 
 - new tests for new behaviour
 - affected-submodule tests green (whole project if no submodules)
-- `fix-loop` clean
+- `fix-loop` clean, or the Review exception below stated
 - for UI/runtime tasks, the changed behaviour exercised in the running app — browser or
   native. Drive it or capture a screenshot; use your agent's run/verify skills if it has
   them. If it truly cannot be run, report it **unverified**: "build/tests green" is not
@@ -60,10 +58,10 @@ Definition of Done, for every task:
 
 Each task runs this cycle.
 
-Throughout it — Red, Green, and Refactor alike — a change to a public function's name,
-parameter list, or return type means reading every caller before claiming the step is done.
-Compile-passing is weak evidence; some languages silently coerce between function types. See
-[development reference](references/development.md).
+Throughout it, a change to a public function's name, parameter list, or return type means
+reading every caller before claiming the step is done; compile-passing is weak evidence.
+Read the [development reference](references/development.md) when you change a public
+signature, mirror existing code, run tests in a background shell, or depend on a local service.
 
 ### 🔴 Red
 
@@ -81,11 +79,9 @@ After any out-of-band mutation (formatter, codegen, `sed`/script rewrite), re-re
 
 ### 🔍 Review
 
-Run `fix-loop` unless the change is pure non-code, or is one-line build/config wiring with no production logic. If using that targeted-verification exception, state the skip and name the command run in the final response.
+Run `fix-loop` unless the change is pure non-code, or is one-line build/config wiring with no production logic. If using that exception, state the skip and name the command run in the final response.
 
 Stop if critical findings or test regressions remain. The task is not done.
-
-Triage new behaviour without new tests as **critical**, not a warning. Edge cases flagged as critical by review must be covered before the task is done.
 
 ## 💾 COMMIT
 
@@ -101,22 +97,21 @@ Before committing:
 No red commits. No pushes without a green check for the commit being pushed.
 
 - If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed.
-- A review pass is also spent when its diff is discarded: if you rebuild or substantially rewrite the implementation after it was reviewed, re-review the diff that actually ships before COMMIT/PR — review attaches to the code being merged, not to an approach you replaced, and a rebuilt fix shipped to a PR unreviewed had its real defect found only by an external reviewer.
+- Review attaches to the code being merged, not to an approach you replaced. If you rebuild or substantially rewrite the implementation after its review, re-review the diff that actually ships before COMMIT/PR; one rebuilt fix went to a PR unreviewed, and only an external reviewer found its defect.
 
 If the user, repository, or agent platform specifies a co-author trailer, include that exact trailer. Otherwise use the current agent's appropriate public attribution if known; do not hard-code another agent's identity.
 
 ## 🔁 ITERATE
 
-Mark a task done only after DEVELOP review passes or the targeted-verification exception is recorded. Adjust remaining tasks when new facts change the plan.
+Mark a task done only when its Definition of Done holds. Adjust remaining tasks when new facts change the plan.
 
 ## ✅ COMPLETE
 
-Before reporting the scope done, disconfirm it — this is the FALSIFY step from PLAN, applied to the result instead of the understanding:
+Before reporting the scope done, disconfirm it — the FALSIFY step from PLAN, applied to the result instead of the understanding:
 
-1. For each behaviour you are about to call done, name the single check that would prove that claim **false**, then run it. Apply the Grounding Checks below: a claim that something *works* or *changed* is grounded by inspecting the real artifact (the rendered element, the served response, the actual file) — not by re-reading the code or trusting a green suite.
-2. A passing test counts only once you have confirmed it exercises the new behaviour — that it fails when the behaviour is removed, not merely that the suite is green.
-3. The check must observe the claim's own signal on the real substrate. A claim about live/real behaviour is not grounded by a fake/mock gateway, a green suite, or a proxy (a DB row, a projection, a log stream with silent failure paths) — say what you observed and on what substrate. If the DoD names a rendered UI, observe the rendered surface, not the store/API behind it. A reported runtime bug is "fixed" only when the symptom is reproduced-then-gone or traced to the exact failing line — never fix-by-analogy.
-4. If a check cannot be run, report that behaviour as **unverified**, not done — and do not commit a behavioural fix whose operative cause is unconfirmed.
+1. For each behaviour you are about to call done, name the single check that would prove that claim **false**, then run it, using the Grounding Checks below.
+2. The check must observe the claim's own signal on the real substrate: the rendered element, the served response, the actual file. A re-read of the code, a fake/mock gateway, a green suite, or a proxy (a DB row, a projection, a log stream with silent failure paths) does not ground a claim about live behaviour — say what you observed and on what substrate. If the DoD names a rendered UI, observe the rendered surface, not the store/API behind it. A reported runtime bug is "fixed" only when the symptom is reproduced-then-gone or traced to the exact failing line — never fix-by-analogy.
+3. If a check cannot be run, report that behaviour as **unverified**, not done — and do not commit a behavioural fix whose operative cause is unconfirmed.
 
 - When disconfirming by mutating a file, undo only the mutation — the inverse `Edit`, or the `sed -i.bak` sidecar — then verify with `git diff`.
 - Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and has three times destroyed the implementation under test.
@@ -131,10 +126,10 @@ Before relying on a claim, ground it:
 | Claim | Grounding action |
 |---|---|
 | A note, ticket, memory, or comment says how code works | Open the source and confirm it still holds. Sources include code, documents, tickets and their parent tickets |
-| A test passed | Confirm it exercised the new behaviour, not only a happy path or name-filtered slice. |
+| A test passed | Confirm it exercises the new behaviour: it fails when the behaviour is removed. A happy path or a name-filtered slice does not count. |
 | A tool said success | Inspect the real effect, output, or served UI when that is the user-facing contract. |
 | A rename or move is done | Search the old name, path, and package across code, docs, and README. |
 | A search found "all" the sites | Confirm against the authoritative enumeration — run the code, query the schema, list the subclasses. A pattern only finds what matches its own text, in the tree you aimed it at. Check what your own command discarded: `head -N` truncates, a `grep -v` noise filter drops real hits, dispatch by indirection (`klass:`, DI, reflection) hides call sites, and first-party source is not the generated client a consumer actually calls. |
-| A command's output proves a claim | Never let the command print the conclusion — an `echo "(none = safe)"` appended to a search prints whether or not the search ran, and an error line or non-zero exit anywhere invalidates the whole compound command. Assert on a positive marker (a test count, a task line, a file timestamp), not on the absence of a failure marker: a run that never happened and a run that passed are identical through `\| rg 'FAILED'`. |
+| A command's output proves a claim | Assert on a positive marker (a test count, a task line, a file timestamp), never on output the command prints for itself or on the absence of a failure marker: an appended `echo "(none = safe)"` prints whether or not the search ran, and a run that never happened looks like a pass through `\| rg 'FAILED'`. An error line or non-zero exit anywhere invalidates the whole compound command. |
 
 If you cannot ground a claim, say so rather than building on it.
