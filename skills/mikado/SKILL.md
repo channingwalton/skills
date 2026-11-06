@@ -1,6 +1,6 @@
 ---
 name: mikado
-description: Mikado Method — try the goal naively, record each break as a prerequisite in a committed graph, revert, then land leaf-first with one green commit per leaf. Use when the user names Mikado or a Mikado graph to resume; when a change in progress has snowballed, each fix revealing more breaks; or when a structural change crosses module or system boundaries through an unknown dependency tangle, such as carving out a module, swapping a framework or a major platform upgrade. Changes inside one module, however many call sites, belong to the usual development workflow.
+description: Mikado Method, with a committed graph and one green commit per leaf. Use when the user names Mikado or a Mikado graph to resume; when a change in progress has snowballed, each fix revealing more breaks; or when a structural change crosses module or system boundaries through an unknown dependency tangle, such as carving out a module, swapping a framework or a major platform upgrade. Changes inside one module, however many call sites, belong to the usual development workflow.
 ---
 
 # Mikado
