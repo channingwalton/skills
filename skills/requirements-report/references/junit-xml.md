@@ -74,8 +74,7 @@ go test -v ./... 2>&1 | go-junit-report -set-exit-code > build/test-results/test
 
 `gotestsum --junitfile build/test-results/test/report.xml` is the friendlier option.
 
-Go test names are function identifiers — see *Languages where the test name is an
-identifier* below. `func Test_req_health_live_ok` works with plain `go test`.
+Go test names are identifiers — see below.
 
 ## Rust
 
@@ -88,9 +87,7 @@ path = "junit.xml"
 
 Output lands under `target/nextest/ci/`. Plain `cargo test` cannot emit JUnit.
 
-Test names are identifiers — see *Languages where the test name is an identifier* below.
-`#[test] fn req_health_live_ok()` works with plain `cargo test` under nextest; there is no
-need for `libtest-mimic` or any other trick to get a `#` into the name.
+Rust test names are identifiers — see below.
 
 ## .NET
 
@@ -125,25 +122,13 @@ func Test_req_health_live_ok(t *testing.T) { … }
 ```
 
 Go's convention is CamelCase, but underscores are legal in a test function name and are
-what the matcher needs — `TestReqHealthLiveOk` will **not** match.
+what the matcher needs — `TestReqHealthLiveOk` will **not** match. Plain `#[test]` and plain
+`go test` work — **no `libtest-mimic`, no subtest wrapper, no converter beyond the usual
+JUnit one.** The binding rules (hyphens as underscores, longest match, orphans, one test per
+id) are in [conventions.md](conventions.md), under *Test names*.
 
-`req_health_live_ok` binds to the requirement `#health-live-ok`; underscores and hyphens are
-the same separator. Plain `#[test]` and plain `go test` work — **no `libtest-mimic`, no
-subtest wrapper, no converter beyond the usual JUnit one.**
-
-The id is matched against the ids your documents define, longest first, so a descriptive
-suffix costs nothing. Only one test may bind an ID; split distinct behaviours into separate
-requirements rather than naming both `req_health_live_ok_when_starting` and
-`req_health_live_ok_under_load`. An unrecognised `req_` is reported as an orphan, so typos
-fail the build.
-
-The `req_` prefix is not decoration. Without it, a bare id would match by accident: `live_ok`
-is a substring of `live_ok_fails`, and short ids like `err` would match almost anything. The
-prefix makes the binding explicit and reads as documentation.
-
-Subtests with string names still work if you prefer them —
-`t.Run("#health-live-ok answers 200", …)` — and give you a human-readable name in the report.
-That is the only reason to choose them.
+Go subtests with string names also work — `t.Run("#health-live-ok answers 200", …)` — when
+you want a human-readable name in the report.
 
 Do **not** use a sidecar map from test name to ids. It is a second artefact to keep in sync,
 which is what this design exists to avoid.

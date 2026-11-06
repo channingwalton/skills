@@ -121,3 +121,28 @@ See [`SKILL.md`](./SKILL.md) for the agent workflow,
 [`references/conventions.md`](./references/conventions.md) for requirement and
 test naming, and
 [`references/junit-xml.md`](./references/junit-xml.md) for test-runner setup.
+
+## Design choices
+
+These features are absent on purpose.
+
+**No content hash, no approvals file.** Version control already puts changed prose in front
+of a reviewer at the moment they should ask "does the test still match?". A hash tripwire
+duplicates that check, fires on every wording clarification, and trains people to
+re-approve without reading.
+
+**No staleness hint.** Earlier versions compared the document's last-changed time against
+the test sources' and warned when the document was newer. Commit times are a poor proxy for
+"the requirement's meaning changed": the warning fired on a formatting commit, and — since
+the test side took the newest change across the whole source root — stayed silent whenever
+any unrelated test file had been touched more recently. False both ways, so it said nothing.
+The report is a build artefact regenerated on every run, so it is always current with the
+document it renders; there is no staleness for it to report.
+
+**No fixtures or expectation columns.** Tables render (see *Tables* in `references/conventions.md`), but they are
+illustration only — nothing reads the expected values back out of them. Binding a
+requirement's expected value is real but narrow, and doing it here would make the document a
+runtime input: a wording change would become a test change, and every language would need a
+Markdown table parser. Where a requirement *is* naturally tabular, its test can be a
+parameterised body over rows and the binding comes back — same id, same report. An
+optimisation of a subset, not the architecture.

@@ -10,7 +10,6 @@
 - One requirement, one test
 - One document, one page
 - Naming ids
-- What is deliberately absent
 
 ## The marker
 
@@ -102,10 +101,12 @@ first. There is no correct granularity to discover — it is whatever you wrote 
 The id goes anywhere in the test name, and **anything may follow it** — the tool reads the
 id and ignores the rest. Punctuation, underscores, a trailing full stop: all fine.
 
-The id is resolved against the ids the documents define, longest first. That is what removes
-the ambiguity: `.` and `-` are legal *inside* an id, so `#live-ok. Answers 200` would
-otherwise bind `live-ok.` and fail as an orphan. An id matching nothing keeps its raw text
-and is reported as an orphan, so typos surface rather than passing silently.
+**The id is resolved against the ids the documents define, longest match first.** That
+removes the ambiguity: `.` and `-` are legal *inside* an id, so `#live-ok. Answers 200`
+would otherwise bind `live-ok.` and fail as an orphan. Where a document defines both
+`#health-obs` and `#health-obs-received`, the more specific one wins. An id matching nothing
+keeps its raw text and is reported as an orphan, so a typo such as `req_helth_live_ok`
+fails the build rather than passing silently.
 
 Write the rest of the name to say what *this test* checks. Restating the requirement adds
 nothing — the report prints it directly above.
@@ -129,18 +130,13 @@ fn req_live_ok() { … }
 
 Underscores and hyphens are equivalent, so `req_live_ok` binds to `#live-ok`. The `req_`
 prefix is required: a bare id would match by accident, since `live_ok` is a substring of
-`live_ok_fails`.
-
-**The id is resolved against the ids your documents define, longest match first**, so
-anything after it is free text:
+`live_ok_fails`. Anything after the id is free text, and the marker may also sit later in
+the name:
 
 ```rust
 fn req_health_obs_received_on_rejected_method()   // binds #health-obs-received
-fn req_health_live_ok_when_starting()             // binds #health-live-ok
+fn rejected_method_req_health_obs()               // binds #health-obs
 ```
-
-That is what lets a test name stay readable. Where a document defines both `#health-obs` and
-`#health-obs-received`, the more specific one wins.
 
 ## One requirement, one test
 
@@ -152,18 +148,11 @@ fn req_health_live_ok_edge_case()    // -> reqreport: a requirement may be
                                      //    named by only one test
 ```
 
-The reason is not tidiness. A second test asserting a second thing *is* a second
-requirement — an edge case, an ordering guarantee, an immutability promise — and leaving it
-under an existing id puts a design decision into the codebase that nobody reading the
-requirements document can see. The rule forces it onto the page where it can be argued with.
-
-The mechanical symptom is smaller but was what exposed it: the source disclosure is indexed
-by id, so every test sharing an id displayed the *first* test's code beneath its own name.
-Since that adjacency is the only check on a test that names one requirement and tests
-another, a wrong join there defeats the one control the report has.
-
-So when the build stops on a shared id, the fix is nearly always to **split the
-requirement**, not to merge the tests:
+A second test asserting a second thing *is* a second requirement — an edge case, an
+ordering guarantee, an immutability promise — and leaving it under an existing id puts a
+design decision into the codebase that nobody reading the requirements document can see.
+The rule forces it onto the page where it can be argued with. So when the build stops on a
+shared id, the fix is nearly always to **split the requirement**, not to merge the tests:
 
 ```markdown
 - given a library, I can add a book to it `#add-a-book`
@@ -173,9 +162,11 @@ requirement**, not to merge the tests:
 Merging is right only when the assertions are genuinely one behaviour that happens to need
 two `assert` calls — then put them in one test body.
 
-A `req_` that matches no defined id keeps its raw text and is reported as an **orphan** —
-so `req_helth_live_ok` (typo) fails the build rather than disappearing into the unlinked
-pile. The marker may also sit later in the name: `rejected_method_req_health_obs` works.
+Parameterisation must stay inside a **single** test case. Runners that emit one JUnit
+`<testcase>` per row — pytest `@parametrize`, JUnit 5 `@ParameterizedTest`, ScalaTest
+table-driven suites with generated names — produce several test names carrying the id, and
+the run stops. Either loop over the rows inside one test body, or put the id on only one row
+and give the others their own requirements.
 
 Several ids in one name are allowed and the test appears under each — appropriate for an
 integration test spanning requirements from more than one document.
@@ -199,33 +190,3 @@ being forbidden.
 - Keep them stable. The id is the join key; renaming one orphans its tests. Wording can
   change freely — only the id is load-bearing.
 - Do not encode status, priority or ownership in the id. It is an identifier, not a record.
-
-## What is deliberately absent
-
-**No content hash, no approvals file.** Version control already puts changed prose in front
-of a reviewer at the moment they should ask "does the test still match?". A hash tripwire
-duplicates that check, fires on every wording clarification, and trains people to
-re-approve without reading.
-
-**No staleness hint.** Earlier versions compared the document's last-changed time against
-the test sources' and warned when the document was newer. Commit times are a poor proxy for
-"the requirement's meaning changed": the warning fired on a formatting commit, and — since
-the test side took the newest change across the whole source root — stayed silent whenever
-any unrelated test file had been touched more recently. False both ways, so it said nothing.
-The report is a build artefact regenerated on every run, so it is always current with the
-document it renders; there is no staleness for it to report.
-
-**No fixtures or expectation columns.** Tables render (see *Tables* above), but they are
-illustration only — nothing reads the expected values back out of them. Binding a
-requirement's expected value is real but narrow, and doing it here would make the document a
-runtime input: a wording change would become a test change, and every language would need a
-Markdown table parser. Where a requirement *is* naturally tabular, its test can be a
-parameterised body over rows and the binding comes back — same id, same report. An
-optimisation of a subset, not the architecture.
-
-One caveat, given *One requirement, one test* above: parameterisation must stay inside a
-**single** test case. Runners that emit one JUnit `<testcase>` per row — pytest
-`@parametrize`, JUnit 5 `@ParameterizedTest`, ScalaTest table-driven suites with generated
-names — produce several distinct test names carrying the id, and the run stops. Either loop
-over the rows inside one test body, or put the id on only one row and give the others their
-own requirements.

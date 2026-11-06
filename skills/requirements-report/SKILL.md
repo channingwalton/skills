@@ -5,8 +5,7 @@ description: >-
   traceability from JUnit XML. Use before writing tests whenever requirements or
   a specification drive implementation, and for living requirements, acceptance
   criteria tied to tests, finding untested requirements, or mapping a failure to
-  its requirement. Works with any test runner that emits JUnit XML; test names
-  must carry requirement IDs.
+  its requirement.
 ---
 
 # Requirements report
@@ -58,10 +57,8 @@ directory. Never derive it from Git: repository and project roots differ in mono
 - Put `#the-id` in free-text names. For identifier names such as Rust and Go, use
   `req_the_id`; Go needs `Test_req_the_id`, not `TestReqTheId`.
 - Descriptive suffixes are allowed because IDs resolve longest-first against the document.
-  An unknown ID is an orphan and fails the build.
-- Allow only one test per requirement ID. Multiple tests naming one ID are fatal: merge
-  assertions of one behaviour or split distinct behaviours into separately identified
-  requirements.
+- Allow only one test per requirement ID (the Shared id gate). Merge assertions of one
+  behaviour, or split distinct behaviours into separately identified requirements.
 - Use the name suffix to describe what the test checks, not to repeat the requirement.
 - Link an existing test only when its coverage is clear. Leave uncertain tests unlinked and
   tell the user; a false link reports coverage that does not exist.
