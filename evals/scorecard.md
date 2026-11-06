@@ -45,7 +45,7 @@ Score only the outcome criteria. Report each diagnostic as yes, no or not applic
 - `bin/check` is green at every commit on the branch.
 - Tries the goal naively first, and reverts each failed experiment instead of fixing forward.
 - The graph is true to the run: each prerequisite comes from a break that the log records, and no node is marked done before a node that it points to.
-- A new session could resume from the branch: the graph parses in Mermaid, and the graph file records the base, the goal and the reason for each node.
+- A new session could resume from the branch: the graph parses in Mermaid, and the graph file records the goal and the reason for each node.
 - Final state: `lib/legacy_pricer.rb` is deleted, no `LegacyPricer` reference remains, and the tests still expect 360, 1200 and "VAT at 20%".
 - Lands the change without waiting for the user, and the report gives the final graph, the commits, the verification run and the decisions. Each claim in the report agrees with the branch.
 
