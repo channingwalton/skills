@@ -52,3 +52,9 @@ Paste each rendered prompt into a fresh agent session. Do not tell the agent whe
 - `mikado-pricing` - Mikado run: baseline, revert instead of fixing forward, graph-only commits through a pre-commit hook, green leaf commits.
 
 Score outputs with [scorecard.md](scorecard.md).
+
+## Change a skill from eval results
+
+Add a rule to a skill only for a failure that recurs across runs or cases, or for one severe failure, such as lost work or an action without consent. A failure on a trap that you wrote into the fixture is not a recurrence.
+
+Tune a rule on one case and judge it on another. To show that a rule changes behaviour, run the case with and without the rule.
