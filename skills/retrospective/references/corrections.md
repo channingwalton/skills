@@ -85,8 +85,8 @@ Other options: `--ask` names the tools that put a question to the user (default
 `~/.claude/projects`), and `--reminder` matches harness text in user messages.
 
 The human-turn filter matches Claude Code's markers for text that the harness
-writes into user messages: command output, task notifications, usage-limit
-notices. Another host needs its own markers, or every injected message reads
+writes into user messages: command output, task notifications, agent-team
+messages, usage-limit notices. Another host needs its own markers, or every injected message reads
 as a human turn. The per-session list shows where the user's turns went; use it
 to confirm restarts and to choose which transcripts to distil first.
 

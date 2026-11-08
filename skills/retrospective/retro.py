@@ -28,7 +28,7 @@ from datetime import datetime
 CAP = 10 * 60  # seconds; a longer reply gap is mostly time away. Human hours only.
 REMINDER = r'<system-reminder>.*?</system-reminder>'
 NOT_HUMAN = ('<local-command-', '<task-notification>', '<bash-stdout>', '<bash-stderr>',
-             '<bash-notification>', '[Usage limit', '[Earlier usage')
+             '<bash-notification>', '<teammate-message', '[Usage limit', '[Earlier usage')
 GIT_C = re.compile(r'git\s+-C\s+(\S+)')
 ASK = ('AskUserQuestion',)
 AUTO = re.compile(r'^vault backup:')
