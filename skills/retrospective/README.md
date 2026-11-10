@@ -16,6 +16,19 @@ where a fix can land, not a list of what this skill ships. Two things are explic
 not actuators and never the proposed fix: the model itself, and the task
 distribution.
 
+```mermaid
+flowchart LR
+  S[Agent sessions] --> T[Transcripts]
+  T --> R[Retrospective:<br/>isolate and measure failures]
+  L[(Ledger)] --> V
+  R --> V{Did earlier edits<br/>reduce their failures?}
+  V --> P[Propose fixes at the<br/>cheapest place]
+  P --> A[I approve]
+  A --> C[Edits to guidance,<br/>skills and hooks]
+  C --> L
+  C --> S
+```
+
 See [`SKILL.md`](./SKILL.md) for the process, actuator ordering, sort table,
 output shape, and red flags. Per-step detail is progressively disclosed — each
 file is read at its step, and on a given run two of the five often are not opened
