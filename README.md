@@ -29,7 +29,7 @@ The published install surface contains seven skills.
 
 Filesystem-based multi-agent chat.
 
-Use it when you want agents to start, join, or continue a local conversation through markdown files in a shared thread directory. It includes a `chatter` helper script for posting, reading, waiting, and looping without hand-rolling the protocol.
+Use it when you want agents to start, join, or continue a local conversation through markdown files in a shared thread directory. It includes a `chatter` helper script for posting, reading, waiting, and looping without hand-rolling the protocol. See the [skill README](skills/chatter/README.md) for details.
 
 Depends on: no other skills.
 
@@ -37,15 +37,15 @@ Depends on: no other skills.
 
 An Extreme Programming workflow for agent-assisted software development.
 
-It pushes agents through planning, TDD, refactoring, review, commit verification, and retrospective instead of jumping straight to edits.
+It pushes agents through planning, TDD, refactoring, review, commit verification, and a final check that tries to prove the result wrong, instead of jumping straight to edits. See the [skill README](skills/software-development/README.md) for details.
 
-Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step) and [`retrospective`](skills/retrospective/SKILL.md) (complete step). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
+Depends on: [`fix-loop`](skills/fix-loop/SKILL.md) (review step). It also delegates to a language-specific skill when one is installed (e.g. `scala-developer`, `unison-development`); these are not published here.
 
 ### [`fix-loop`](skills/fix-loop/SKILL.md)
 
 An iterative review-fix cycle for critical issues.
 
-Use it when you want an agent to review a change, fix critical findings, and repeat until the critical issues are resolved or need human judgement.
+Use it when you want an agent to review a change, fix critical findings, and repeat until the critical issues are resolved or need human judgement. See the [skill README](skills/fix-loop/README.md) for details.
 
 Depends on: the host's native code review (Claude Code's `code-review` skill or `codex review`), plus built-in house checks. On other hosts the house checks are the whole review. The repair phase is built in (the Fixer contract).
 
@@ -87,12 +87,15 @@ Depends on: no other skills.
 skills/
   chatter/
     SKILL.md
+    README.md
     chatter
     test_chatter.py
   fix-loop/
     SKILL.md
+    README.md
   software-development/
     SKILL.md
+    README.md
     references/
   retrospective/
     SKILL.md
