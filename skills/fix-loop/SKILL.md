@@ -16,7 +16,7 @@ Keep the reviewer and fixer roles separate even though one agent plays both: fin
 Run the row for your host:
 
 | Host | Invocation | Scope |
-|---|---|---|
+| --- | --- | --- |
 | Claude Code | `code-review` skill with an explicit level and target: `code-review high <target>` on iteration 1, `code-review medium <target>` after. A bare call reuses the user's last level. Pass no `--fix`, `--comment`, or `ultra`. | Target is the Input or NARROW scope: paths, a branch, or a PR. |
 | Codex | Shell out to `codex review` with a scope flag: `--uncommitted`, `--base <branch>`, or `--commit <sha>`. The `/review` slash command is user-only. | Diff only; a scope flag takes no prompt argument. Later iterations re-run `--uncommitted`, which covers the fixes because this loop never commits. |
 | Other | Run the House checks as the whole review. | Input scope. |
@@ -24,7 +24,7 @@ Run the row for your host:
 Normalise findings before TRIAGE:
 
 | Claude `code-review` | Codex `review` | Triage as |
-|---|---|---|
+| --- | --- | --- |
 | CONFIRMED correctness finding | `[P0]`, `[P1]` | Critical |
 | PLAUSIBLE | `[P2]` | Settle with one command: proven → Critical, not ruled out → Warning |
 | `simplification`, `efficiency`, `reuse` category | `[P3]` | Suggestion |
@@ -53,18 +53,18 @@ Before fixing, run the project's canonical verification command if discoverable 
 
 ## Loop
 
-Maximum 3 fix iterations, and the loop always ends on a review. After the third FIX and VERIFY, announce `Final review` and run REVIEW once more on the narrowed scope; report its Critical findings under Remaining Critical, unfixed. A fix no review has seen is never reported as reviewed: in one fortnight, five loops that stopped on a fix shipped their last round unreviewed.
+Maximum 5 fix iterations, and the loop always ends on a review. After the fifth FIX and VERIFY, announce `Final review` and run REVIEW once more on the narrowed scope; report its Critical findings under Remaining Critical, unfixed. A fix no review has seen is never reported as reviewed.
 
 For each iteration:
 
-1. REVIEW - announce `Review iteration N/3`; run the Review section against the current scope, then normalise its findings.
+1. REVIEW - announce `Review iteration N/5`; run the Review section against the current scope, then normalise its findings.
 2. TRIAGE - extract Critical findings:
    - A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it.
    - Every finding the reviewer raised goes in the report under exactly one heading, in the reviewer's words. A finding triaged only in your reasoning is a dropped finding.
    - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, and findings a check ruled out (name the check). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals; such lists shipped known defects in a notarised release and a public repo.
    - **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** Reasoned downgrades twice buried a shipping-blocker under cosmetic framing; each time, the probe took one command.
    - If nothing remains to fix, stop.
-3. FIX - announce `Fix iteration N/3 - addressing X Critical issue(s)`; apply the Fixer contract below.
+3. FIX - announce `Fix iteration N/5 - addressing X Critical issue(s)`; apply the Fixer contract below.
 4. VERIFY - run the narrowest relevant tests, then the canonical command when practical. Compare with baseline.
 5. NARROW - set next scope to modified files plus any newly touched files. If nothing changed because findings were unfixable, stop.
 
@@ -93,7 +93,7 @@ A fix iteration is complete only when every Critical finding is fixed or marked 
 # Fix Loop Report
 
 ## Iterations
-N/3 fix iterations; final review: [clean | N Critical, listed under Remaining Critical]
+N/5 fix iterations; final review: [clean | N Critical, listed under Remaining Critical]
 
 ## Resolved
 - [file:line] [issue] - fixed in iteration N

@@ -1,7 +1,7 @@
 # fix-loop
 
 Review a change, fix its Critical findings, and review it again. The loop stops
-when no Critical finding is left, or after three rounds of fixes. It always ends
+when no Critical finding is left, or after five rounds of fixes. It always ends
 on a review, so no fix reaches you unreviewed.
 
 A plain code review only reports. fix-loop also repairs, but only the Critical
@@ -52,7 +52,7 @@ flowchart TD
   full check, and compares the result with the baseline. The next review covers
   only the files that the fixes touched.
 
-After the third round of fixes, the agent runs one final review and reports its
+After the fifth round of fixes, the agent runs one final review and reports its
 Critical findings as unfixed.
 
 ## Review on each host
