@@ -82,8 +82,7 @@ subagent that file and its one transcript, and nothing else.
 - Create one working directory with `mktemp -d`. Before you distil, reuse the
   notes that an earlier aborted run left, and distil only what is missing.
 - Spawn at most ~12 distil subagents per retro session. The cap counts every
-  spawn, not only concurrent ones: on 2026-09-20 the 13th spawn failed after the
-  first 12 finished, and a 40-agent fan-out once ended a whole retro at the
+  spawn, not only concurrent ones, because a larger fan-out can reach the
   session limit. Distil the remainder yourself, and state in the report how many
   sessions the subagents examined and how many you examined.
 
@@ -204,9 +203,7 @@ attention on a decision they already made.
 ### 7. CONFIRM
 
 **Write the report to the ledger as a `proposed, not applied` section before you
-ask.** Then an unanswered question loses only the edits, not the run: on
-2026-07-22 a complete run was lost behind a prose "Apply these?" that nobody
-answered.
+ask.** Then an unanswered question loses only the edits, not the run.
 
 Then present the report (Output Shape below) and ask with **AskUserQuestion, not
 prose**. Do nothing further without a yes. Record which proposals the user
@@ -220,8 +217,7 @@ plugin or cache copies that an update will overwrite.
 
 A gate edit is not applied until its matcher has been replayed against the real
 in-window command forms, including forms that the standing rules mandate (e.g.
-`git -C <path>`). All three gates from one retro had matcher defects that only
-showed after APPLY.
+`git -C <path>`). A matcher defect otherwise shows only after APPLY.
 
 Then read `references/ledger.md`. Change the `proposed, not applied` section to
 its final state, and append one row per applied edit, one REJECTED row per

@@ -97,7 +97,7 @@ Before committing:
 No red commits. No pushes without a green check for the commit being pushed.
 
 - If review is deferred across a batch, record it as a task at the moment of deferral — an in-context promise does not survive a restart, and an unreviewed batch must not be pushed.
-- Review attaches to the code being merged, not to an approach you replaced. If you rebuild or substantially rewrite the implementation after its review, re-review the diff that actually ships before COMMIT/PR; one rebuilt fix went to a PR unreviewed, and only an external reviewer found its defect.
+- Review attaches to the code being merged, not to an approach you replaced. If you rebuild or substantially rewrite the implementation after its review, re-review the diff that actually ships before COMMIT/PR; a rebuilt fix is otherwise unreviewed code.
 
 If the user, repository, or agent platform specifies a co-author trailer, include that exact trailer. Otherwise use the current agent's appropriate public attribution if known; do not hard-code another agent's identity.
 
@@ -114,7 +114,7 @@ Before reporting the scope done, disconfirm it — the FALSIFY step from PLAN, a
 3. If a check cannot be run, report that behaviour as **unverified**, not done — and do not commit a behavioural fix whose operative cause is unconfirmed.
 
 - When disconfirming by mutating a file, undo only the mutation — the inverse `Edit`, or the `sed -i.bak` sidecar — then verify with `git diff`.
-- Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and has three times destroyed the implementation under test.
+- Reach for `git checkout -- <file>` only when `git diff` shows the mutation is that file's only uncommitted change: it resets to HEAD and destroys the uncommitted implementation under test.
 - Never restore from a `cp` backup, and never read a chained `&& echo` as proof the command before it ran — an aliased `cp -i`/`rm -i` declines silently while the echo still prints; use `command cp` / `command rm`.
 
 Then report the change and the verification you ran.
