@@ -57,6 +57,8 @@ Definition of Done, for every task:
 ## 🔴 DEVELOP
 
 Each task runs this cycle.
+The refactor step is part of this cycle, also when another skill, such as `tdd`,
+puts refactoring in the review stage.
 
 Throughout it, a change to a public function's name, parameter list, or return type means
 reading every caller before claiming the step is done; compile-passing is weak evidence.
