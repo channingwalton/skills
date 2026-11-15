@@ -87,6 +87,8 @@ If a fix breaks tests:
 
 A fix iteration is complete only when every Critical finding is fixed or marked unfixable, and verification status is clear.
 
+When a review finds a Critical defect in code that an earlier fix of this loop added, and it is the second such defect in one unit, stop patching case by case. Write the cases as tests first — the states of a state machine, or a differential or property test for a parser — then fix against them.
+
 ## Final Report
 
 ```markdown

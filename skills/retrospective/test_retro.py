@@ -55,7 +55,8 @@ class MeasureSessionTest(unittest.TestCase):
                   user(T0 + 3, 'meta', isMeta=True),
                   user(T0 + 4, 'summary', isCompactSummary=True),
                   user(T0 + 5, 'from a hook', origin={'kind': 'hook'}),
-                  user(T0 + 6, '<teammate-message teammate_id="team-lead">do X</teammate-message>')]
+                  user(T0 + 6, '<teammate-message teammate_id="team-lead">do X</teammate-message>'),
+                  user(T0 + 7, 'Another Claude session sent a message:\n<teammate-message teammate_id="b1">done</teammate-message>')]
         self.assertEqual(retro.measure_session(events, START).counts['turns'], 0)
 
     def test_an_interrupt_is_counted_apart_from_turns(self):
