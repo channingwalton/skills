@@ -3,7 +3,10 @@
 Run the Mikado Method (Ola Ellnestam and Daniel Brolund) with an agent on a
 structural change whose dependencies you can't map up front. The agent tries the
 goal the naive way, writes each break into a graph of prerequisites, reverts,
-and then lands the change leaf-first, one green commit per leaf.
+and then lands the change leaf-first, one green commit per leaf. When there is
+more than one plausible approach to an outcome, the graph records a choice
+between the approaches, and the agent probes them within a budget before it
+selects one.
 
 The habit it replaces is **fixing forward**: chasing compile errors and test
 failures until the build goes green, ending with one snowballed diff that nobody
@@ -31,8 +34,10 @@ flowchart TD
     red["Revert and record<br/>revert the code, add prerequisites<br/>to the graph, commit the graph"]
     green["Land the leaf<br/>full check,<br/>commit code and graph"]
     finish["Finish<br/>review and fix the branch,<br/>report"]
+    choose["Resolve a choice<br/>probe approaches within a budget,<br/>revert, select one"]
 
     start --> pick --> exp
+    pick -- "choice with no<br/>selected approach" --> choose --> pick
     exp -- "breaks" --> red --> pick
     exp -- "green" --> green
     green -- "full check fails" --> red
@@ -50,7 +55,8 @@ flowchart TD
   is red. Last, it creates a `mikado/<slug>` branch and commits the graph file,
   which records the base.
 - **Experiment.** The agent picks a ready node (not done, with every
-  prerequisite done) and makes that change directly. For a node that adds
+  prerequisite done, and on the route through the selected approach of each
+  choice) and makes that change directly. For a node that adds
   behaviour, it writes a failing test first. For each break it asks: could this
   be changed first, on its own, leaving the build green? If so, it is a
   prerequisite. If not, it belongs to this node and is fixed within the
@@ -68,14 +74,52 @@ flowchart TD
   fixes what the review finds, and reports the final graph, the commits, the
   verification run, any decisions it settled, and any stash it made.
 
+## Choices between approaches
+
+Ordinary prerequisite edges mean AND: every prerequisite must be done. A
+**choice** means OR: it sits below an outcome, its children are different
+**approaches** to that outcome, and one approach must succeed. An outcome can
+have ordinary AND prerequisites beside a choice.
+
+The agent adds a choice only when the approaches could materially change the
+work. It probes at most two approaches at first, each within a fixed budget,
+reverts each probe, and records the evidence. Then it selects one approach, or
+asks you to select one (see below). The other approaches stay in the graph as
+deferred, blocked or rejected, with the evidence for each.
+
+When the selected approach is complete, the choice is done. The outcome above
+it then becomes ready like any other node. If the approach already made the
+whole change, the agent only verifies the outcome and marks it done.
+
+```mermaid
+graph TD
+  goal["goal · Replace the database library"]
+  goal --> n4["n4 · Connection settings load from one module"]:::done
+  goal --> c1{"c1 · OR"}
+  c1 --> a1["a1 · Migrate callers directly"]:::selected
+  c1 --> a2["a2 · Keep the old API through an adapter"]:::deferred
+  c1 --> a3["a3 · Run both libraries side by side"]:::rejected
+  a1 --> n1["n1 · Callers use application-owned types"]
+  a2 --> n2["n2 · Adapter keeps the required query semantics"]
+  a1 --> n3["n3 · Behavioural checks cover database operations"]:::done
+  a2 --> n3
+  classDef done fill:#cfc,stroke:#393
+  classDef selected stroke:#36c,stroke-width:3px
+  classDef deferred fill:#eee,stroke:#999,stroke-dasharray:5 5,color:#666
+  classDef rejected fill:#fdd,stroke:#c33,stroke-dasharray:5 5,color:#933
+```
+
+A run with no plausible second approach has no choices, and the skill runs as
+ordinary Mikado.
+
 ## When it stops to ask
 
 The agent drives the experiments, but two things stop it and send you the
 graph:
 
 - **A design decision.** A node has materially different options, such as the
-  name of a new concept, the shape of an interface, or how a dependency is
-  passed. If you pre-authorised the work ("land this", "don't wait for me"), the
+  name of a new concept, the shape of an interface, how a dependency is
+  passed, or which approach of a choice to select. If you pre-authorised the work ("land this", "don't wait for me"), the
   agent takes the smallest reversible option instead, logs it as a decision, and
   lists it in the report.
 - **Scope.** The graph outgrows the goal: prerequisites reach another service,
@@ -89,7 +133,9 @@ graph:
 The graph lives in `docs/mikado/<slug>.md` on the branch. It records the base
 the branch started from, and holds a Mermaid graph, with edges running from a
 node to its prerequisites and done nodes styled, plus a log that records why
-each node exists. Each prerequisite label starts with its node ID, so the log
+each node exists. A run with a choice also has a Choices table that records
+the status of each approach and the evidence for it, and the graph styles
+selected, deferred, blocked and rejected approaches. Each prerequisite label starts with its node ID, so the log
 and the commit messages can cite it. A mid-run graph looks like this:
 
 ```mermaid
@@ -136,4 +182,6 @@ cp -R skills/mikado ~/.codex/skills/
 
 If you don't use Codex, copy it to your agent's skill directory instead.
 
-See [`SKILL.md`](./SKILL.md) for the full instructions the agent follows.
+See [`SKILL.md`](./SKILL.md) for the full instructions the agent follows, and
+[`references/choices.md`](./references/choices.md) for the choice procedure,
+which the agent reads only when a run needs a choice.
