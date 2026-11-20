@@ -61,7 +61,8 @@ For each iteration:
 2. TRIAGE - extract Critical findings:
    - A Warning that names a concrete correctness defect introduced by the change under review is triaged as Critical unless the user explicitly defers it.
    - Every finding the reviewer raised goes in the report under exactly one heading, in the reviewer's words. A finding triaged only in your reasoning is a dropped finding.
-   - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, and findings a check ruled out (name the check). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals; a finding in such a list ships as a known defect.
+   - *Noted* holds only Suggestions, Warnings that name no correctness defect, findings on code that predates this session, findings a check ruled out (name the check), and findings outside the operating model (next rule). A correctness finding on code this session wrote is Resolved, Remaining Critical, or *Deferred by user* with the user's quoted words. "Commit it", "looks good", "handing this to task 2" and a list inside a collapsed section the user never opened are not deferrals; a finding in such a list ships as a known defect.
+   - A finding whose failure scenario needs an actor or condition outside the project's operating model is not a defect of this change — for example, another process that changes files during a millisecond operation in a single-user app. File it under *Noted* and quote the sentence from the project guidance or the user that excludes it. If no such sentence exists, stop at the second finding of that class and ask the user once whether the class is in scope, with your recommendation; the answer is the quote.
    - **Settle severity with a check, not by reasoning about it: a finding you cannot rule out in one command is not a Suggestion — run the command, or file it as a Warning.** A reasoned downgrade can hide a defect that blocks the release, and the probe takes one command.
    - If nothing remains to fix, stop.
 3. FIX - announce `Fix iteration N/5 - addressing X Critical issue(s)`; apply the Fixer contract below.
@@ -87,7 +88,7 @@ If a fix breaks tests:
 
 A fix iteration is complete only when every Critical finding is fixed or marked unfixable, and verification status is clear.
 
-When a review finds a Critical defect in code that an earlier fix of this loop added, and it is the second such defect in one unit, stop patching case by case. Write the cases as tests first — the states of a state machine, or a differential or property test for a parser — then fix against them.
+When a review finds a Critical defect in code that an earlier fix of this loop added, and it is the second such defect in one unit, stop patching case by case. First name the class that the defects share, such as races, hostile input or environment. If the class is outside the operating model, apply the TRIAGE rule and remove what earlier fixes added for it. Otherwise write the cases as tests first — the states of a state machine, or a differential or property test for a parser — then fix against them.
 
 ## Final Report
 
